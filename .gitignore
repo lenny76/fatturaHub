@@ -1,0 +1,11 @@
+node_modules/
+data/
+dist/
+.env
+*.log
+.DS_Store
+*.p7m
+.claude/
+CLAUDE.md
+AGENTS.md
+website/
