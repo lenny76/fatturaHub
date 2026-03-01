@@ -37,7 +37,7 @@ Importa l'intero archivio di fatture passive (XML e XML.p7m) ricevute via SDI: v
 docker compose up -d
 ```
 
-App disponibile su: **http://localhost:8080**
+App disponibile su: **http://localhost:5173**
 
 I dati vengono salvati in `./data/` (volume montato).
 
@@ -45,7 +45,7 @@ I dati vengono salvati in `./data/` (volume montato).
 
 ```bash
 npm run install:all   # installa dipendenze backend + frontend
-npm run dev           # avvia backend (porta 3000) + frontend (porta 5173)
+npm run dev           # avvia backend + frontend (porta 5173)
 ```
 
 ## Foglio di stile XSLT
