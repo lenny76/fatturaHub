@@ -27,5 +27,5 @@ COPY --from=frontend-builder /app/frontend/dist ./public
 # Persistent data directories (override via volume)
 RUN mkdir -p /app/data/db /app/data/files/attive /app/data/files/passive
 
-EXPOSE 3000
+EXPOSE 5173
 CMD ["node", "src/index.js"]
