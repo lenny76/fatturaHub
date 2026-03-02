@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { XMLParser } = require('fast-xml-parser');
 const { getDb } = require('../db/schema');
 const { deleteInvoice } = require('../services/indexer');
 const { deleteInvoiceFile, FILES_PATH } = require('../utils/fileStore');
@@ -57,7 +58,7 @@ router.get('/', (req, res) => {
     SELECT id, filename, file_type, direction, transmission_format,
            supplier_name, buyer_name,
            invoice_number, invoice_date, document_type, year,
-           total_amount, taxable_amount, tax_amount, imported_at
+           total_amount, taxable_amount, tax_amount, imported_at, has_attachments
     FROM invoices ${where}
     ORDER BY ${safeSort} ${safeOrder}
     LIMIT ${parseInt(limit)} OFFSET ${offset}
@@ -205,6 +206,76 @@ router.get('/:id/xml', (req, res) => {
 
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
   res.send(xmlContent);
+});
+
+/**
+ * GET /api/invoices/:id/attachments/:index/download
+ * Decodifica e serve il file allegato (base64) all'indice :index (0-based).
+ * ?inline=1 → Content-Disposition: inline (per anteprima nel browser)
+ * default   → Content-Disposition: attachment (download forzato)
+ */
+router.get('/:id/attachments/:index/download', (req, res) => {
+  const db = getDb();
+  const row = db.prepare('SELECT xml_content FROM invoices WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Fattura non trovata' });
+  if (!row.xml_content) return res.status(404).json({ error: 'Contenuto XML non disponibile' });
+
+  let allegati;
+  try {
+    const attParser = new XMLParser({
+      ignoreAttributes: false,
+      isArray: (name) => name === 'Allegati',
+      parseTagValue: true,
+    });
+    const doc = attParser.parse(row.xml_content);
+    const rootKey = Object.keys(doc).find(
+      (k) => k === 'FatturaElettronica' || k.endsWith(':FatturaElettronica')
+    );
+    if (!rootKey) return res.status(404).json({ error: 'Struttura XML non valida' });
+    const bodies = doc[rootKey]['FatturaElettronicaBody'];
+    const body = Array.isArray(bodies) ? bodies[0] : bodies;
+    const raw = body?.['Allegati'];
+    allegati = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+  } catch (e) {
+    console.error('[attachments] XML parse error:', e.message);
+    return res.status(500).json({ error: 'Errore parsing XML: ' + e.message });
+  }
+
+  const index = parseInt(req.params.index, 10);
+  if (isNaN(index) || index < 0 || index >= allegati.length) {
+    return res.status(404).json({ error: 'Allegato non trovato' });
+  }
+
+  const att = allegati[index];
+  const nome = String(att['NomeAttachment'] || `allegato_${index}`);
+  const formato = String(att['FormatoAttachment'] || '').toUpperCase();
+  const algoritmo = String(att['AlgoritmoCompressione'] || '').toUpperCase();
+  const base64 = String(att['Attachment'] || '');
+
+  if (!base64) return res.status(404).json({ error: 'Contenuto allegato mancante' });
+
+  const MIME_MAP = {
+    PDF: 'application/pdf', XML: 'application/xml', ZIP: 'application/zip',
+    TXT: 'text/plain', CSV: 'text/csv',
+    XLSX: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    XLS: 'application/vnd.ms-excel',
+    DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    DOC: 'application/msword', PNG: 'image/png', JPG: 'image/jpeg',
+    JPEG: 'image/jpeg', P7M: 'application/pkcs7-mime',
+  };
+  const mimeType = algoritmo === 'ZIP'
+    ? 'application/zip'
+    : (MIME_MAP[formato] || 'application/octet-stream');
+
+  const fileBuffer = Buffer.from(base64, 'base64');
+  const safeNome = nome.replace(/["\r\n]/g, '_');
+  const isInline = req.query.inline === '1';
+
+  res.setHeader('Content-Type', mimeType);
+  res.setHeader('Content-Disposition',
+    `${isInline ? 'inline' : 'attachment'}; filename="${safeNome}"`);
+  res.setHeader('Content-Length', fileBuffer.length);
+  res.send(fileBuffer);
 });
 
 /**

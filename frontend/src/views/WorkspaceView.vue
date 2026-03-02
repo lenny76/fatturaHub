@@ -95,7 +95,19 @@
               <td class="col-td font-mono">{{ inv.invoice_date?.slice(0,10) }}</td>
               <td class="col-td font-mono hidden sm:table-cell" :class="selectedId === inv.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'">{{ inv.invoice_number }}</td>
               <td class="col-td truncate max-w-[100px] sm:max-w-[160px]">{{ inv.supplier_name }}</td>
-              <td class="col-td text-right font-medium tabular-nums">{{ formatCurrency(inv.total_amount) }}</td>
+              <td class="col-td font-medium tabular-nums">
+                <div class="flex items-center justify-end">
+                  {{ formatCurrency(inv.total_amount) }}
+                  <span class="w-4 flex-none flex justify-center ml-1">
+                    <span
+                      v-if="inv.has_attachments"
+                      title="Ha allegati"
+                      :class="selectedId === inv.id ? 'text-blue-200' : 'text-gray-400 dark:text-gray-500'"
+                      class="text-[11px] leading-none"
+                    >📎</span>
+                  </span>
+                </div>
+              </td>
             </tr>
             <tr v-if="!store.list.length">
               <td colspan="4" class="col-td text-center text-gray-400 dark:text-gray-500 italic py-8">Nessuna fattura</td>
@@ -141,9 +153,9 @@
           </select>
 
           <div class="flex-1" />
-          <button @click="toggleXml" class="action-btn">{{ showXml ? '📄' : '</>' }}</button>
-          <a :href="`/api/invoices/${selectedId}/download`" class="action-btn">⬇</a>
-          <button @click="deleteSelected" class="action-btn text-red-600 hover:bg-red-50">🗑</button>
+          <button @click="toggleXml" :title="showXml ? 'Visualizza fattura' : 'Visualizza XML originale'" class="action-btn">{{ showXml ? '📄' : '</>' }}</button>
+          <a :href="`/api/invoices/${selectedId}/download`" title="Scarica file originale" class="action-btn">⬇</a>
+          <button @click="deleteSelected" title="Elimina fattura" class="action-btn text-red-600 hover:bg-red-50">🗑</button>
         </div>
 
         <div class="flex-1 overflow-auto p-2 sm:p-4">

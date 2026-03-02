@@ -1,5 +1,53 @@
 <template>
   <div class="h-full flex flex-col">
+    <!-- Pannello allegati (sopra la fattura, fuori dalla catena v-if) -->
+    <div
+      v-if="!loading && attachments.length"
+      class="flex-none border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3"
+    >
+      <div class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+        Allegati ({{ attachments.length }})
+      </div>
+      <ul class="space-y-1.5">
+        <li v-for="att in attachments" :key="att.index" class="flex items-center gap-2 text-xs">
+          <!-- Badge formato -->
+          <span class="flex-none px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase">
+            {{ getFormato(att) || '?' }}
+          </span>
+          <!-- Nome file -->
+          <span class="flex-1 truncate text-gray-700 dark:text-gray-200" :title="att.nome">
+            {{ att.nome }}
+          </span>
+          <!-- Descrizione opzionale -->
+          <span
+            v-if="att.descrizione"
+            class="flex-none text-gray-400 dark:text-gray-500 text-[10px] truncate max-w-[120px]"
+            :title="att.descrizione"
+          >
+            {{ att.descrizione }}
+          </span>
+          <!-- Anteprima (solo formati supportati dal browser) -->
+          <button
+            v-if="PREVIEWABLE.has(getFormato(att).toUpperCase())"
+            @click="previewAtt = att"
+            :title="`Anteprima: ${att.nome}`"
+            class="flex-none text-xs px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+          >
+            &#128065; Anteprima
+          </button>
+          <!-- Scarica -->
+          <a
+            :href="`/api/invoices/${props.invoiceId}/attachments/${att.index}/download`"
+            target="_blank"
+            class="flex-none text-xs px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+            :title="`Scarica ${att.nome}`"
+          >
+            &#x2B07; Scarica
+          </a>
+        </li>
+      </ul>
+    </div>
+
     <div v-if="loading" class="flex-1 flex items-center justify-center text-gray-400 text-sm">
       Caricamento...
     </div>
@@ -20,10 +68,66 @@
       <div v-html="rendered" />
     </div>
   </div>
+
+  <!-- Modal anteprima allegato (Teleport a body per evitare clipping) -->
+  <Teleport to="body">
+    <div
+      v-if="previewAtt"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+      @click.self="previewAtt = null"
+      @keydown.esc.window="previewAtt = null"
+    >
+      <div class="relative flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-xl w-[90vw] h-[90vh] max-w-5xl overflow-hidden">
+        <!-- Header modal -->
+        <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex-none">
+          <span class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate mr-4">
+            {{ previewAtt.nome }}
+          </span>
+          <div class="flex items-center gap-2 flex-none">
+            <a
+              :href="`/api/invoices/${props.invoiceId}/attachments/${previewAtt.index}/download`"
+              target="_blank"
+              class="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              &#x2B07; Scarica
+            </a>
+            <button
+              @click="previewAtt = null"
+              class="text-gray-500 hover:text-gray-900 dark:hover:text-white text-lg leading-none px-1"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenuto anteprima -->
+        <div class="flex-1 overflow-hidden bg-gray-100 dark:bg-gray-800">
+          <!-- Caricamento blob -->
+          <div v-if="!previewUrl" class="h-full flex items-center justify-center text-gray-400 text-sm">
+            Caricamento...
+          </div>
+          <!-- Immagini -->
+          <div
+            v-else-if="['PNG','JPG','JPEG'].includes(getFormato(previewAtt).toUpperCase())"
+            class="h-full flex items-center justify-center p-4"
+          >
+            <img :src="previewUrl" :alt="previewAtt.nome" class="max-h-full max-w-full object-contain" />
+          </div>
+          <!-- PDF, XML, TXT, CSV: blob URL → il browser renderizza senza header Content-Disposition -->
+          <iframe
+            v-else
+            :src="previewUrl"
+            class="w-full h-full border-0"
+            :title="previewAtt.nome"
+          />
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import api from '@/api';
 
 const props = defineProps({
@@ -36,6 +140,21 @@ const iframeSrcDoc = ref('');
 const loading = ref(true);
 const error = ref(null);
 const filename = ref('');
+const attachments = ref([]);
+const previewAtt = ref(null);
+const previewUrl = ref(null);   // Blob URL per l'anteprima (evita interferenze Content-Disposition)
+
+// Formati che il browser può visualizzare inline in iframe o <img>
+const PREVIEWABLE = new Set(['PDF', 'PNG', 'JPG', 'JPEG', 'XML', 'TXT', 'CSV']);
+
+// Restituisce il formato effettivo: FormatoAttachment se presente,
+// altrimenti l'estensione del NomeAttachment (fallback per campi assenti)
+function getFormato(att) {
+  if (att.algoritmo === 'ZIP') return 'ZIP';
+  if (att.formato) return att.formato;
+  const m = att.nome.match(/\.([^.]+)$/);
+  return m ? m[1] : '';
+}
 
 // getElementsByTagName is namespace-agnostic (unlike querySelector)
 function getText(node, tag) {
@@ -46,24 +165,44 @@ function getAllElements(node, tag) {
   return [...(node?.getElementsByTagName(tag) || [])];
 }
 
+function parseAttachments(xmlString) {
+  const doc = parseXmlWithNs(xmlString);
+  return getAllElements(doc, 'Allegati').map((el, index) => ({
+    index,
+    nome: getText(el, 'NomeAttachment') || `allegato_${index}`,
+    formato: getText(el, 'FormatoAttachment'),
+    descrizione: getText(el, 'DescrizioneAttachment'),
+    algoritmo: getText(el, 'AlgoritmoCompressione'),
+  }));
+}
+
 async function render() {
   loading.value = true;
   error.value = null;
   iframeSrcDoc.value = '';
   rendered.value = '';
+  attachments.value = [];
+  previewAtt.value = null;
 
   try {
     const { data: invoice } = await api.get(`/invoices/${props.invoiceId}`);
     filename.value = invoice.filename || '';
 
+    // Fetch XML per tutti i modi (serve anche per gli allegati in ministeriale)
+    const { data: xmlString } = await api.get(`/invoices/${props.invoiceId}/xml`, { responseType: 'text' });
+    attachments.value = parseAttachments(xmlString);
+
     if (props.mode === 'ministeriale') {
-      const res = await api.get(`/invoices/${props.invoiceId}/ministeriale`, { responseType: 'text' });
-      iframeSrcDoc.value = res.data;
+      try {
+        const res = await api.get(`/invoices/${props.invoiceId}/ministeriale`, { responseType: 'text' });
+        iframeSrcDoc.value = res.data;
+      } catch (e) {
+        error.value = e.response?.data?.error || e.message;
+      }
       return;
     }
 
     // Semplificata / Completa: custom HTML renderer
-    const { data: xmlString } = await api.get(`/invoices/${props.invoiceId}/xml`, { responseType: 'text' });
     rendered.value = buildHtml(xmlString, props.mode === 'completa');
   } catch (e) {
     error.value = e.response?.data?.error || e.message;
@@ -75,23 +214,23 @@ async function render() {
 function parseXmlWithNs(xmlString) {
   // Remove invalid XML characters (0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F)
   const sanitized = xmlString.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
-  
+
   // Remove namespace prefixes from element names
   let stripped = sanitized
     .replace(/<(\w+):/g, '<')  // Remove namespace prefix from opening tags
     .replace(/<\/(\w+):/g, '</')  // Remove namespace prefix from closing tags
-    
+
   // Remove xmlns declarations and namespace-prefixed attributes (like xsi:schemaLocation)
   stripped = stripped.replace(/\s+(\w+):(\w+)=/g, ' $2=');
   stripped = stripped.replace(/\s+xmlns(:\w+)?="[^"]*"/g, '');
-  
+
   const parser = new DOMParser();
   return parser.parseFromString(stripped, 'application/xml');
 }
 
 function buildHtml(xmlString, full) {
   const doc = parseXmlWithNs(xmlString);
-  
+
   const parseError = doc.querySelector('parsererror');
   if (parseError) {
     throw new Error('XML non valido: ' + (parseError.textContent?.trim() || 'errore sconosciuto'));
@@ -202,7 +341,29 @@ function buildHtml(xmlString, full) {
   </div>`;
 }
 
+function revokePreviewUrl() {
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value);
+    previewUrl.value = null;
+  }
+}
+
+// Quando cambia l'allegato in anteprima: fetcha il file e crea un Blob URL
+// (i blob URL non hanno Content-Disposition → il browser renderizza direttamente il contenuto)
+watch(previewAtt, async (att) => {
+  revokePreviewUrl();
+  if (!att) return;
+  try {
+    const res = await fetch(`/api/invoices/${props.invoiceId}/attachments/${att.index}/download`);
+    const blob = await res.blob();
+    previewUrl.value = URL.createObjectURL(blob);
+  } catch (e) {
+    console.error('[preview] fetch error:', e);
+  }
+});
+
 onMounted(render);
+onUnmounted(revokePreviewUrl);
 watch(() => props.invoiceId, render);
 watch(() => props.mode, render);
 </script>

@@ -18,7 +18,7 @@ function ensureStmts() {
       buyer_vat, buyer_fiscal_code, buyer_name,
       invoice_number, invoice_date, document_type, year, month,
       total_amount, taxable_amount, tax_amount,
-      xml_content, file_hash
+      xml_content, file_hash, has_attachments
     ) VALUES (
       @filename, @filePath, @fileType, @direction,
       @transmission_format,
@@ -26,7 +26,7 @@ function ensureStmts() {
       @buyer_vat, @buyer_fiscal_code, @buyer_name,
       @invoice_number, @invoice_date, @document_type, @year, @month,
       @total_amount, @taxable_amount, @tax_amount,
-      @xmlContent, @fileHash
+      @xmlContent, @fileHash, @hasAttachments
     )
   `);
 
@@ -41,7 +41,8 @@ function ensureStmts() {
   `);
 
   _runTransaction = db.transaction(({ filename, filePath, fileType, direction, fileHash, xmlContent, invoice, lines }) => {
-    const result = insert.run({ filename, filePath, fileType, direction, ...invoice, xmlContent, fileHash });
+    const hasAttachments = xmlContent && xmlContent.includes('<Allegati>') ? 1 : 0;
+    const result = insert.run({ filename, filePath, fileType, direction, ...invoice, xmlContent, fileHash, hasAttachments });
     const invoiceId = result.lastInsertRowid;
 
     for (const line of lines) {
