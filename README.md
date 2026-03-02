@@ -12,6 +12,7 @@ Importa l'intero archivio di fatture passive (XML e XML.p7m) ricevute via SDI: v
 - **Ricerca full-text** su descrizioni, fornitore, cliente (FTS5)
 - **Filtri** per anno, mese, tipo documento, fornitore
 - **Visualizzazione** con foglio di stile XSLT ufficiale o renderer HTML integrato
+- **Allegati** — visualizzazione e download degli allegati incorporati nelle fatture (PDF, PNG, XML, ecc.) con anteprima inline
 - **Download** dei file originali
 - **Dashboard** con totali per anno, top fornitori, importazioni recenti
 - **Anti-duplicati** tramite hash SHA256
