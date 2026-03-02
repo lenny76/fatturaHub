@@ -11,3 +11,5 @@ services:
       - NODE_ENV=production
       - DB_PATH=/app/data/db/fatturahub.db
       - FILES_PATH=/app/data/files
+    volumes:
+      - ./data:/app/data
