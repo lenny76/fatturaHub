@@ -123,7 +123,7 @@
 
     <!-- ── Footer ── -->
     <footer class="flex-none h-6 flex items-center justify-center bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500 select-none">
-      © 2026 Lenny76
+      © 2026 Lenny76 &nbsp;·&nbsp; <a href="https://fatturahub.lenny76.com" target="_blank" rel="noopener" class="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">fatturahub.lenny76.com</a>
     </footer>
 
     <!-- ── Upload modal ── -->

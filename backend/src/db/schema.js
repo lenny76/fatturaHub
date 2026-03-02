@@ -77,6 +77,13 @@ function initDb() {
     // Column already exists, ignore
   }
 
+  // Migration: add has_attachments column if it doesn't exist
+  try {
+    db.exec(`ALTER TABLE invoices ADD COLUMN has_attachments INTEGER DEFAULT 0`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
   // Data migration: backfill month (and year) from invoice_date for records imported before the month column existed
   db.exec(`
     UPDATE invoices
@@ -84,6 +91,13 @@ function initDb() {
       month = CAST(substr(invoice_date, 6, 2) AS INTEGER),
       year  = CAST(substr(invoice_date, 1, 4) AS INTEGER)
     WHERE month IS NULL AND invoice_date IS NOT NULL
+  `);
+
+  // Data migration: backfill has_attachments from xml_content for previously imported invoices
+  db.exec(`
+    UPDATE invoices
+    SET has_attachments = CASE WHEN xml_content LIKE '%<Allegati>%' THEN 1 ELSE 0 END
+    WHERE has_attachments = 0 AND xml_content IS NOT NULL
   `);
 
   db.exec(`

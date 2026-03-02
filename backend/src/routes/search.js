@@ -49,7 +49,7 @@ router.get('/', (req, res) => {
     const rows = db.prepare(`
       SELECT id, filename, file_type, direction, supplier_name, buyer_name,
              invoice_number, invoice_date, document_type, year,
-             total_amount, taxable_amount, tax_amount
+             total_amount, taxable_amount, tax_amount, has_attachments
       FROM invoices ${where}
       ORDER BY invoice_date DESC
       LIMIT ${parseInt(limit)} OFFSET ${offset}
@@ -85,7 +85,7 @@ router.get('/', (req, res) => {
   const rows = db.prepare(`
     SELECT id, filename, file_type, direction, supplier_name, buyer_name,
            invoice_number, invoice_date, document_type, year,
-           total_amount, taxable_amount, tax_amount
+           total_amount, taxable_amount, tax_amount, has_attachments
     FROM invoices ${where}
     ORDER BY invoice_date DESC
     LIMIT ${parseInt(limit)} OFFSET ${offset}
