@@ -19,6 +19,7 @@ const invoicesRouter = require('./routes/invoices');
 const searchRouter = require('./routes/search');
 const statsRouter = require('./routes/stats');
 const adminRouter = require('./routes/admin');
+const versionRouter = require('./routes/version');
 
 const app = express();
 const PORT = process.env.PORT || 5173;
@@ -35,6 +36,7 @@ app.use('/api/invoices', invoicesRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/version', versionRouter);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

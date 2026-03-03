@@ -53,9 +53,9 @@
         <h2 class="font-semibold mb-3 text-gray-700">Importazioni recenti</h2>
         <ul class="divide-y text-sm">
           <li v-for="inv in stats.recentImports" :key="inv.id" class="py-2 flex justify-between items-center">
-            <RouterLink :to="`/fatture/${inv.id}`" class="text-blue-600 hover:underline truncate max-w-xs">
+            <span class="truncate max-w-xs text-gray-700 dark:text-gray-300">
               {{ inv.supplier_name || inv.buyer_name || inv.filename }}
-            </RouterLink>
+            </span>
             <span class="text-gray-400 text-xs ml-4">{{ formatDate(inv.invoice_date) }}</span>
           </li>
           <li v-if="!stats.recentImports.length" class="py-2 text-gray-400 italic">Nessuna importazione</li>

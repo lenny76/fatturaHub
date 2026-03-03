@@ -5,7 +5,18 @@
     <header class="flex-none bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm z-20">
       <!-- Prima riga -->
       <div class="h-12 flex items-center gap-2 px-3">
-        <span class="font-bold text-base tracking-tight text-gray-800 dark:text-white mr-2">FatturaHub</span>
+        <RouterLink to="/" class="font-bold text-base tracking-tight text-gray-800 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">FatturaHub</RouterLink>
+        <a
+          v-if="updateAvailable"
+          :href="`https://github.com/lenny76/fatturaHub/releases/latest`"
+          target="_blank"
+          rel="noopener"
+          class="ml-1 mr-1 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800 transition-colors"
+          title="Nuova versione disponibile"
+        >
+          ↑ v{{ latestVersion }}
+        </a>
+        <span v-else class="mr-1" />
 
         <!-- Ricerca -->
         <div class="flex items-center bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-2 gap-1">
@@ -25,6 +36,11 @@
         </div>
 
         <div class="flex-1" />
+
+        <!-- Dashboard -->
+        <RouterLink to="/dashboard" class="toolbar-btn" title="Dashboard statistiche">
+          📊 <span class="ml-1 text-xs hidden sm:inline">Dashboard</span>
+        </RouterLink>
 
         <!-- Carica -->
         <button @click="showUpload = true" class="toolbar-btn" title="Carica fatture">
@@ -113,6 +129,16 @@
         >
           {{ m }}
         </button>
+
+        <!-- Reset filtri -->
+        <button
+          v-if="hasActiveFilters"
+          @click="resetFilters"
+          class="ml-2 flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-300 dark:hover:bg-orange-800 transition-colors whitespace-nowrap"
+          title="Azzera tutti i filtri"
+        >
+          × Reset
+        </button>
       </div>
     </header>
 
@@ -132,7 +158,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useInvoicesStore } from '@/stores/invoices';
 import UploadModal from '@/components/UploadModal.vue';
 import api from '@/api';
@@ -141,6 +167,8 @@ const store = useInvoicesStore();
 const showUpload = ref(false);
 const showSettings = ref(false);
 const isDark = ref(false);
+const updateAvailable = ref(false);
+const latestVersion = ref('');
 
 function toggleDark() {
   isDark.value = !isDark.value;
@@ -149,10 +177,16 @@ function toggleDark() {
 }
 const selectedYears = ref([]);
 const selectedMonths = ref([]);
-const selectedDocType = ref('');
 const searchQ = ref('');
 
 const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+const hasActiveFilters = computed(() => selectedYears.value.length > 0 || selectedMonths.value.length > 0);
+
+function saveFilters() {
+  localStorage.setItem('fh_years', JSON.stringify(selectedYears.value));
+  localStorage.setItem('fh_months', JSON.stringify(selectedMonths.value));
+}
 
 function toggleYear(year) {
   if (year === null) {
@@ -185,6 +219,18 @@ function toggleMonth(month) {
 function applyFilters() {
   store.setFilter('years', selectedYears.value.join(','));
   store.setFilter('months', selectedMonths.value.join(','));
+  saveFilters();
+  store.fetchList();
+}
+
+function resetFilters() {
+  selectedYears.value = [];
+  selectedMonths.value = [];
+  searchQ.value = '';
+  store.setFilter('years', '');
+  store.setFilter('months', '');
+  store.setFilter('q', '');
+  saveFilters();
   store.fetchList();
 }
 
@@ -193,8 +239,30 @@ onMounted(async () => {
   isDark.value = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.classList.toggle('dark', isDark.value);
 
+  // Ripristina filtri salvati
+  try {
+    const savedYears = localStorage.getItem('fh_years');
+    const savedMonths = localStorage.getItem('fh_months');
+    if (savedYears) selectedYears.value = JSON.parse(savedYears);
+    if (savedMonths) selectedMonths.value = JSON.parse(savedMonths);
+    if (selectedYears.value.length) store.setFilter('years', selectedYears.value.join(','));
+    if (selectedMonths.value.length) store.setFilter('months', selectedMonths.value.join(','));
+  } catch {
+    // localStorage corrotto — ignora
+  }
+
   await store.fetchStats();
   await store.fetchList();
+
+  try {
+    const { data } = await api.get('/version');
+    if (data.updateAvailable) {
+      updateAvailable.value = true;
+      latestVersion.value = data.latest;
+    }
+  } catch {
+    // versione check non critico
+  }
 });
 
 async function onUploadClose() {
@@ -222,8 +290,8 @@ async function resetAllData() {
     store.resetFilters();
     selectedYears.value = [];
     selectedMonths.value = [];
-    selectedDocType.value = '';
     searchQ.value = '';
+    saveFilters();
     await store.fetchStats();
     await store.fetchList();
   } catch (e) {
