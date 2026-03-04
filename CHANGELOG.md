@@ -5,6 +5,13 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.2.1] - 2026-03-04
+
+### Fix
+- Docker: corretto il path di `package.json` in `version.js` (causava crash all'avvio del container)
+
+---
+
 ## [1.2.0] - 2026-03-04
 
 ### Aggiunto
