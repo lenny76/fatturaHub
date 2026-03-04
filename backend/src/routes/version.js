@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { version: currentVersion } = require('../../../package.json');
+const { version: currentVersion } = require('../../package.json');
 
 let cache = null;
 let cacheTime = 0;
