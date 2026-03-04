@@ -130,30 +130,6 @@ function initDb() {
       invoice_number,
       tokenize='unicode61'
     );
-
-    -- Migration: add missing columns to FTS5 for existing databases
-    -- Recreate FTS table with new columns and reindex data
-    CREATE TABLE IF NOT EXISTS invoice_fts_backup AS SELECT * FROM invoice_fts;
-    DROP TABLE IF EXISTS invoice_fts;
-    CREATE VIRTUAL TABLE IF NOT EXISTS invoice_fts USING fts5(
-      invoice_id UNINDEXED,
-      supplier_name,
-      descriptions,
-      supplier_vat,
-      invoice_number,
-      tokenize='unicode61'
-    );
-
-    -- Reindex all existing invoices into the new FTS structure
-    INSERT INTO invoice_fts (invoice_id, supplier_name, descriptions, supplier_vat, invoice_number)
-    SELECT 
-      i.id,
-      COALESCE(i.supplier_name, ''),
-      COALESCE((SELECT GROUP_CONCAT(l.description, ' ') FROM invoice_lines l WHERE l.invoice_id = i.id), ''),
-      COALESCE(i.supplier_vat, ''),
-      COALESCE(i.invoice_number, '')
-    FROM invoices i;
-    DROP TABLE IF EXISTS invoice_fts_backup;
   `);
 
   console.log('Database initialized at', DB_PATH);
