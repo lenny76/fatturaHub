@@ -487,6 +487,9 @@ async function executeDeleteAll() {
 .toolbar-btn {
   @apply flex items-center px-2 py-1 rounded text-xs text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer;
 }
+a.toolbar-btn.router-link-active {
+  @apply bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400;
+}
 .toolbar-select {
   @apply bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 text-xs rounded px-2 py-1 outline-none focus:border-blue-500;
 }
