@@ -5,6 +5,13 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.2.5] - 2026-03-04
+
+### Modificato
+- **Vista Ministeriale nascosta**: il pulsante "Ministeriale" non compare più nella toolbar del visualizzatore in attesa di un'implementazione completa e stabile.
+
+---
+
 ## [1.2.4] - 2026-03-04
 
 ### Aggiunto
