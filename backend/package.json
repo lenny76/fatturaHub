@@ -1,6 +1,6 @@
 {
   "name": "fatturahub-backend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Backend for FatturaHub - Italian electronic invoice manager",
   "main": "src/index.js",
   "scripts": {

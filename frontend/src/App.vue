@@ -5,7 +5,18 @@
     <header class="flex-none bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm z-20">
       <!-- Prima riga -->
       <div class="h-12 flex items-center gap-2 px-3">
-        <span class="font-bold text-base tracking-tight text-gray-800 dark:text-white mr-2">FatturaHub</span>
+        <RouterLink to="/" class="font-bold text-base tracking-tight text-gray-800 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">FatturaHub</RouterLink>
+        <a
+          v-if="updateAvailable"
+          :href="`https://github.com/lenny76/fatturaHub/releases/latest`"
+          target="_blank"
+          rel="noopener"
+          class="ml-1 mr-1 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800 transition-colors"
+          title="Nuova versione disponibile"
+        >
+          ↑ v{{ latestVersion }}
+        </a>
+        <span v-else class="mr-1" />
 
         <!-- Ricerca -->
         <div class="flex items-center bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-2 gap-1">
@@ -25,6 +36,11 @@
         </div>
 
         <div class="flex-1" />
+
+        <!-- Dashboard -->
+        <RouterLink to="/dashboard" class="toolbar-btn" title="Dashboard statistiche">
+          📊 <span class="ml-1 text-xs hidden sm:inline">Dashboard</span>
+        </RouterLink>
 
         <!-- Carica -->
         <button @click="showUpload = true" class="toolbar-btn" title="Carica fatture">
@@ -65,6 +81,13 @@
               Impostazioni
             </div>
             <button
+              @click="openYearSettings"
+              class="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+            >
+              📅 Visibilità anni
+            </button>
+            <div class="border-t border-gray-100 dark:border-gray-700 my-1" />
+            <button
               @click="resetAllData"
               class="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 flex items-center gap-2"
             >
@@ -85,7 +108,7 @@
           Tutti
         </button>
         <button
-          v-for="y in store.years"
+          v-for="y in visibleYears"
           :key="y"
           @click="toggleYear(y)"
           class="filter-btn"
@@ -113,6 +136,30 @@
         >
           {{ m }}
         </button>
+
+        <template v-if="store.docTypes.length">
+          <div class="w-px h-4 bg-gray-200 dark:bg-gray-600 mx-2" />
+          <!-- Tipo documento -->
+          <select
+            v-model="selectedDocType"
+            @change="applyDocType"
+            class="toolbar-select"
+            title="Filtra per tipo documento"
+          >
+            <option value="">Tipo: tutti</option>
+            <option v-for="dt in store.docTypes" :key="dt" :value="dt">{{ dt }}</option>
+          </select>
+        </template>
+
+        <!-- Reset filtri -->
+        <button
+          v-if="hasActiveFilters"
+          @click="resetFilters"
+          class="ml-2 flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900 dark:text-orange-300 dark:hover:bg-orange-800 transition-colors whitespace-nowrap"
+          title="Azzera tutti i filtri"
+        >
+          × Reset
+        </button>
       </div>
     </header>
 
@@ -122,17 +169,123 @@
     </div>
 
     <!-- ── Footer ── -->
-    <footer class="flex-none h-6 flex items-center justify-center bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500 select-none">
-      © 2026 Lenny76 &nbsp;·&nbsp; <a href="https://fatturahub.lenny76.com" target="_blank" rel="noopener" class="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">fatturahub.lenny76.com</a>
+    <footer class="flex-none h-6 flex items-center justify-center bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500 select-none gap-2">
+      <span>© 2026 Lenny76</span>
+      <span>·</span>
+      <a href="https://fatturahub.lenny76.com" target="_blank" rel="noopener" class="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">fatturahub.lenny76.com</a>
+      <template v-if="currentVersion">
+        <span>·</span>
+        <span>v{{ currentVersion }}</span>
+      </template>
     </footer>
 
     <!-- ── Upload modal ── -->
     <UploadModal v-if="showUpload" @close="onUploadClose" />
+
+    <!-- ── Year Visibility Modal ── -->
+    <div v-if="showYearSettings" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" @click.self="showYearSettings = false">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-64">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-sm font-semibold text-gray-800 dark:text-white">Visibilità anni</h2>
+          <button @click="showYearSettings = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <p class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
+          Gli anni nascosti sono esclusi dai filtri e dai risultati. Le nuove importazioni sono sempre visibili di default.
+        </p>
+        <div class="px-2 pb-3 space-y-0.5 max-h-64 overflow-y-auto">
+          <div v-if="!store.years.length" class="text-xs text-gray-400 text-center py-4">Nessun anno disponibile</div>
+          <div
+            v-for="y in store.years"
+            :key="y"
+            class="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+            @click="toggleYearVisibility(y)"
+          >
+            <span class="text-sm" :class="hiddenYears.includes(y) ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-800 dark:text-white'">{{ y }}</span>
+            <!-- Eye: visibile -->
+            <svg v-if="!hiddenYears.includes(y)" class="w-4 h-4 text-blue-500 flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            <!-- Eye-off: nascosto -->
+            <svg v-else class="w-4 h-4 text-gray-400 flex-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Delete Confirm Modal ── -->
+    <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" @click.self="cancelDelete">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-80">
+
+        <!-- Step 1: avviso -->
+        <template v-if="deleteStep === 1">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">Elimina tutti i dati</h2>
+            <button @click="cancelDelete" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="px-4 py-4 space-y-2">
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              Stai per eliminare <strong>tutte le fatture</strong> e i file associati. Questa operazione è <strong>irreversibile</strong>.
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Vuoi continuare?</p>
+          </div>
+          <div class="flex justify-end gap-2 px-4 pb-4">
+            <button @click="cancelDelete" class="px-3 py-1.5 rounded text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Annulla</button>
+            <button @click="confirmDeleteStep1" class="px-3 py-1.5 rounded text-xs bg-red-600 text-white hover:bg-red-700">Sì, continua</button>
+          </div>
+        </template>
+
+        <!-- Step 2: verifica testuale -->
+        <template v-else>
+          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">Conferma finale</h2>
+            <button @click="cancelDelete" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="px-4 py-4 space-y-3">
+            <p class="text-xs text-gray-600 dark:text-gray-400">
+              Digita <strong class="font-mono text-red-600 dark:text-red-400">ELIMINA</strong> per confermare:
+            </p>
+            <input
+              v-model="deleteConfirmText"
+              @keyup.enter="executeDeleteAll"
+              type="text"
+              placeholder="ELIMINA"
+              autofocus
+              class="w-full px-3 py-1.5 text-sm border rounded outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white border-gray-300 dark:border-gray-600 focus:border-red-500"
+            />
+          </div>
+          <div class="flex justify-end gap-2 px-4 pb-4">
+            <button @click="cancelDelete" class="px-3 py-1.5 rounded text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Annulla</button>
+            <button
+              @click="executeDeleteAll"
+              :disabled="deleteConfirmText !== 'ELIMINA'"
+              class="px-3 py-1.5 rounded text-xs text-white transition-colors"
+              :class="deleteConfirmText === 'ELIMINA' ? 'bg-red-600 hover:bg-red-700' : 'bg-red-300 dark:bg-red-900 cursor-not-allowed'"
+            >Elimina tutto</button>
+          </div>
+        </template>
+
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useInvoicesStore } from '@/stores/invoices';
 import UploadModal from '@/components/UploadModal.vue';
 import api from '@/api';
@@ -140,19 +293,59 @@ import api from '@/api';
 const store = useInvoicesStore();
 const showUpload = ref(false);
 const showSettings = ref(false);
+const showYearSettings = ref(false);
+const showDeleteConfirm = ref(false);
+const deleteStep = ref(1);
+const deleteConfirmText = ref('');
 const isDark = ref(false);
+const updateAvailable = ref(false);
+const latestVersion = ref('');
+const currentVersion = ref('');
 
 function toggleDark() {
   isDark.value = !isDark.value;
   document.documentElement.classList.toggle('dark', isDark.value);
   localStorage.setItem('theme', isDark.value ? 'dark' : 'light');
 }
+const hiddenYears = ref([]);
 const selectedYears = ref([]);
 const selectedMonths = ref([]);
 const selectedDocType = ref('');
 const searchQ = ref('');
 
+const visibleYears = computed(() => store.years.filter(y => !hiddenYears.value.includes(y)));
+
+const effectiveYears = computed(() => {
+  const selected = selectedYears.value.filter(y => !hiddenYears.value.includes(y));
+  if (selected.length > 0) return selected;
+  if (hiddenYears.value.length > 0) return visibleYears.value;
+  return [];
+});
+
 const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+const hasActiveFilters = computed(() => selectedYears.value.length > 0 || selectedMonths.value.length > 0 || !!selectedDocType.value);
+
+function saveFilters() {
+  localStorage.setItem('fh_years', JSON.stringify(selectedYears.value));
+  localStorage.setItem('fh_months', JSON.stringify(selectedMonths.value));
+}
+
+function openYearSettings() {
+  showSettings.value = false;
+  showYearSettings.value = true;
+}
+
+function toggleYearVisibility(year) {
+  if (hiddenYears.value.includes(year)) {
+    hiddenYears.value = hiddenYears.value.filter(y => y !== year);
+  } else {
+    hiddenYears.value = [...hiddenYears.value, year];
+    selectedYears.value = selectedYears.value.filter(y => y !== year);
+  }
+  localStorage.setItem('fh_hidden_years', JSON.stringify(hiddenYears.value));
+  applyFilters();
+}
 
 function toggleYear(year) {
   if (year === null) {
@@ -183,9 +376,25 @@ function toggleMonth(month) {
 }
 
 function applyFilters() {
-  store.setFilter('years', selectedYears.value.join(','));
+  store.setFilter('years', effectiveYears.value.join(','));
   store.setFilter('months', selectedMonths.value.join(','));
+  saveFilters();
   store.fetchList();
+}
+
+function applyDocType() {
+  store.setFilter('docType', selectedDocType.value);
+  store.fetchList();
+}
+
+function resetFilters() {
+  selectedYears.value = [];
+  selectedMonths.value = [];
+  selectedDocType.value = '';
+  searchQ.value = '';
+  store.setFilter('docType', '');
+  store.setFilter('q', '');
+  applyFilters(); // usa effectiveYears per rispettare gli anni nascosti
 }
 
 onMounted(async () => {
@@ -193,14 +402,39 @@ onMounted(async () => {
   isDark.value = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.classList.toggle('dark', isDark.value);
 
+  // Ripristina anni nascosti
+  try {
+    const savedHidden = localStorage.getItem('fh_hidden_years');
+    if (savedHidden) hiddenYears.value = JSON.parse(savedHidden);
+  } catch {}
+
+  // Ripristina filtri salvati
+  try {
+    const savedYears = localStorage.getItem('fh_years');
+    const savedMonths = localStorage.getItem('fh_months');
+    if (savedYears) selectedYears.value = JSON.parse(savedYears);
+    if (savedMonths) selectedMonths.value = JSON.parse(savedMonths);
+  } catch {}
+
   await store.fetchStats();
-  await store.fetchList();
+  applyFilters(); // effectiveYears è ora calcolabile con store.years popolato
+
+  try {
+    const { data } = await api.get('/version');
+    currentVersion.value = data.current;
+    if (data.updateAvailable) {
+      updateAvailable.value = true;
+      latestVersion.value = data.latest;
+    }
+  } catch {
+    // versione check non critico
+  }
 });
 
 async function onUploadClose() {
   showUpload.value = false;
   await store.fetchStats();
-  await store.fetchList();
+  applyFilters(); // ricalcola effectiveYears (nuovi anni sono visibili di default)
 }
 
 function doSearch() {
@@ -214,18 +448,35 @@ function clearSearch() {
   store.fetchList();
 }
 
-async function resetAllData() {
+function resetAllData() {
   showSettings.value = false;
-  if (!confirm('Eliminare TUTTI i dati? Questa operazione è irreversibile.')) return;
+  deleteStep.value = 1;
+  deleteConfirmText.value = '';
+  showDeleteConfirm.value = true;
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false;
+  deleteConfirmText.value = '';
+}
+
+function confirmDeleteStep1() {
+  deleteStep.value = 2;
+  deleteConfirmText.value = '';
+}
+
+async function executeDeleteAll() {
+  if (deleteConfirmText.value !== 'ELIMINA') return;
   try {
     await api.delete('/admin/reset');
+    showDeleteConfirm.value = false;
     store.resetFilters();
     selectedYears.value = [];
     selectedMonths.value = [];
     selectedDocType.value = '';
     searchQ.value = '';
-    await store.fetchStats();
-    await store.fetchList();
+    saveFilters();
+    await Promise.all([store.fetchStats(), store.fetchList()]);
   } catch (e) {
     alert('Errore: ' + (e.response?.data?.error || e.message));
   }
