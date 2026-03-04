@@ -16,6 +16,8 @@ Importa l'intero archivio di fatture passive (XML e XML.p7m) ricevute via SDI: v
 - **Download** dei file originali
 - **Dashboard** con totali per anno, top fornitori, importazioni recenti
 - **Anti-duplicati** tramite hash SHA256
+- **Dark mode** — interfaccia chiara o scura con preferenza salvata automaticamente
+- **Notifiche aggiornamenti** — controllo automatico della versione più recente disponibile su GitHub
 - **Solo fatture passive** (ricevute via SDI) — progettato per uso self-hosted locale
 
 ## Stack
