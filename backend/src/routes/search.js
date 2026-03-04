@@ -8,7 +8,11 @@ const router = express.Router();
  * Query params: q (full-text), direction, years, months, docType, supplier, buyer
  */
 router.get('/', (req, res) => {
-  const { q, direction, years, months, docType, supplier, buyer, page = 1, limit = 50 } = req.query;
+  const { q, direction, years, months, docType, supplier, buyer, page = 1, limit = 50, sort = 'invoice_date', order = 'DESC' } = req.query;
+
+  const validSorts = ['invoice_date', 'supplier_name', 'buyer_name', 'total_amount', 'invoice_number', 'imported_at'];
+  const safeSort = validSorts.includes(sort) ? sort : 'invoice_date';
+  const safeOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
   const db = getDb();
   const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -51,7 +55,7 @@ router.get('/', (req, res) => {
              invoice_number, invoice_date, document_type, year,
              total_amount, taxable_amount, tax_amount, has_attachments
       FROM invoices ${where}
-      ORDER BY invoice_date DESC
+      ORDER BY ${safeSort} ${safeOrder}
       LIMIT ${parseInt(limit)} OFFSET ${offset}
     `).all(params);
 
@@ -87,7 +91,7 @@ router.get('/', (req, res) => {
            invoice_number, invoice_date, document_type, year,
            total_amount, taxable_amount, tax_amount, has_attachments
     FROM invoices ${where}
-    ORDER BY invoice_date DESC
+    ORDER BY ${safeSort} ${safeOrder}
     LIMIT ${parseInt(limit)} OFFSET ${offset}
   `).all(params);
 
