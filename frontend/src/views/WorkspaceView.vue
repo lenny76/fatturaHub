@@ -126,6 +126,73 @@
       </div>
     </div>
 
+    <!-- ── Delete Invoice Confirm Modal ── -->
+    <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" @click.self="cancelDeleteInvoice">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-80">
+
+        <!-- Step 1: avviso con dettagli -->
+        <template v-if="deleteStep === 1">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">Elimina fattura</h2>
+            <button @click="cancelDeleteInvoice" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="px-4 py-4 space-y-2">
+            <p class="text-sm text-gray-700 dark:text-gray-300">Stai per eliminare la seguente fattura:</p>
+            <div class="text-xs bg-gray-50 dark:bg-gray-700 rounded p-2 space-y-1 text-gray-600 dark:text-gray-300">
+              <div><span class="font-semibold">Fornitore:</span> {{ selectedInvoice?.supplier_name || '—' }}</div>
+              <div><span class="font-semibold">N. fattura:</span> {{ selectedInvoice?.invoice_number || '—' }}</div>
+              <div><span class="font-semibold">Data:</span> {{ selectedInvoice?.invoice_date?.slice(0,10) || '—' }}</div>
+              <div><span class="font-semibold">Importo:</span> {{ formatCurrency(selectedInvoice?.total_amount) }}</div>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Questa operazione è <strong>irreversibile</strong>. Vuoi continuare?</p>
+          </div>
+          <div class="flex justify-end gap-2 px-4 pb-4">
+            <button @click="cancelDeleteInvoice" class="px-3 py-1.5 rounded text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Annulla</button>
+            <button @click="deleteStep = 2" class="px-3 py-1.5 rounded text-xs bg-red-600 text-white hover:bg-red-700">Sì, continua</button>
+          </div>
+        </template>
+
+        <!-- Step 2: parola di controllo -->
+        <template v-else>
+          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-sm font-semibold text-red-600 dark:text-red-400">Conferma finale</h2>
+            <button @click="cancelDeleteInvoice" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="px-4 py-4 space-y-3">
+            <p class="text-xs text-gray-600 dark:text-gray-400">
+              Digita <strong class="font-mono text-red-600 dark:text-red-400">ELIMINA</strong> per confermare:
+            </p>
+            <input
+              v-model="deleteConfirmText"
+              @keyup.enter="executeDelete"
+              type="text"
+              placeholder="ELIMINA"
+              autofocus
+              class="w-full px-3 py-1.5 text-sm border rounded outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white border-gray-300 dark:border-gray-600 focus:border-red-500"
+            />
+          </div>
+          <div class="flex justify-end gap-2 px-4 pb-4">
+            <button @click="cancelDeleteInvoice" class="px-3 py-1.5 rounded text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Annulla</button>
+            <button
+              @click="executeDelete"
+              :disabled="deleteConfirmText !== 'ELIMINA'"
+              class="px-3 py-1.5 rounded text-xs text-white transition-colors"
+              :class="deleteConfirmText === 'ELIMINA' ? 'bg-red-600 hover:bg-red-700' : 'bg-red-300 dark:bg-red-900 cursor-not-allowed'"
+            >Elimina</button>
+          </div>
+        </template>
+
+      </div>
+    </div>
+
     <!-- ── Pannello destra: Viewer ── -->
     <div
       class="flex-col overflow-hidden bg-white dark:bg-gray-900 lg:flex lg:flex-1"
@@ -183,12 +250,17 @@ import api from '@/api';
 const store = useInvoicesStore();
 const selectedId = ref(null);
 const showXml = ref(false);
+const showDeleteConfirm = ref(false);
+const deleteStep = ref(1);
+const deleteConfirmText = ref('');
 const viewMode = ref(localStorage.getItem('viewMode') || 'semplificata');
 watch(viewMode, (val) => localStorage.setItem('viewMode', val));
 const activeSupplier = ref('');
 const supplierList = ref([]);
 const showSidebar = ref(false);
 const supplierSearch = ref('');
+
+const selectedInvoice = computed(() => store.list.find(i => i.id === selectedId.value) ?? null);
 
 const filteredSupplierList = computed(() => {
   const q = supplierSearch.value.trim().toLowerCase();
@@ -261,8 +333,22 @@ function selectInvoice(id) {
 
 function toggleXml() { showXml.value = !showXml.value; }
 
-async function deleteSelected() {
-  if (!selectedId.value || !confirm('Eliminare questa fattura?')) return;
+function deleteSelected() {
+  if (!selectedId.value) return;
+  deleteStep.value = 1;
+  deleteConfirmText.value = '';
+  showDeleteConfirm.value = true;
+}
+
+function cancelDeleteInvoice() {
+  showDeleteConfirm.value = false;
+  deleteStep.value = 1;
+  deleteConfirmText.value = '';
+}
+
+async function executeDelete() {
+  if (deleteConfirmText.value !== 'ELIMINA') return;
+  cancelDeleteInvoice();
   await store.deleteInvoice(selectedId.value);
   selectedId.value = null;
 }

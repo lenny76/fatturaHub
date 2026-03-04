@@ -5,13 +5,37 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
-## [1.1.1] - 2026-03-04
+## [1.2.0] - 2026-03-04
 
 ### Aggiunto
-- Impostazioni → "Visibilità anni": modale per nascondere/mostrare singoli anni dai filtri e dai risultati
-- Gli anni nascosti vengono esclusi automaticamente da tutte le query API (toolbar e lista)
-- Le nuove importazioni sono sempre visibili di default (solo gli anni esplicitamente nascosti vengono esclusi)
-- Preferenza persistita in `localStorage` (`fh_hidden_years`)
+- Dashboard: pannello "Importazioni recenti" con fornitore e data delle ultime fatture importate
+- Dashboard: card "Anni" nel riepilogo statistiche
+- Dashboard: breadcrumb di navigazione con link diretto alle fatture
+- Conferma eliminazione singola fattura con modale a due passi (dettaglio fattura → digitare "ELIMINA")
+
+### Migliorato
+- Dashboard: layout "Top fornitori" rinnovato con badge contatori e troncamento testo migliorato
+- Toolbar: evidenziazione del link attivo (Dashboard / Fatture) con stile visivo dedicato
+
+---
+
+## [1.1.0] - 2026-03-03
+
+### Aggiunto
+- **Notifiche di aggiornamento**: l'app controlla automaticamente se è disponibile una nuova versione su GitHub e mostra un badge nella toolbar
+- **Filtro per tipo documento**: selettore nella toolbar per filtrare le fatture per tipo (es. fattura, nota di credito, parcella)
+- **Modalità ministeriale**: visualizzazione con i fogli di stile XSL ufficiali dell'Agenzia delle Entrate, renderizzati lato server
+- **Dark mode Dashboard**: la vista statistiche supporta ora la modalità scura
+- **Conferma reset dati**: il reset di tutti i dati richiede la digitazione di "ELIMINA" per confermare (protezione da eliminazioni accidentali)
+- **Visibilità anni**: modale nelle impostazioni per nascondere/mostrare singoli anni dalla toolbar e dai risultati; preferenza salvata in `localStorage`
+- **Pulsante Reset Filtri**: azzeramento rapido di tutti i filtri attivi dalla toolbar
+- **Collegamento Dashboard**: accesso diretto alla dashboard tramite link nella toolbar principale
+- **Favicon SVG**: nuova favicon scalabile in formato SVG per una migliore resa su tutti i dispositivi
+
+### Migliorato
+- Footer: mostra ora la versione corrente dell'applicazione accanto al copyright
+
+---
 
 ## [1.0.0] - 2026-03-03
 
