@@ -279,7 +279,6 @@ const filteredSupplierList = computed(() => {
 const viewModes = [
   { val: 'semplificata', label: 'Semplificata' },
   { val: 'completa', label: 'Completa' },
-  { val: 'ministeriale', label: 'Ministeriale' },
 ];
 
 const totalPages = computed(() => Math.max(1, Math.ceil(store.total / store.filters.limit)));
