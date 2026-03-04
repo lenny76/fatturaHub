@@ -7,6 +7,40 @@ const router = express.Router();
  * GET /api/stats
  * Returns dashboard statistics
  */
+/**
+ * GET /api/stats/analysis
+ * Aggregati (count, imponibile, IVA, totale) con filtri opzionali
+ */
+router.get('/analysis', (req, res) => {
+  const { years, months, docType } = req.query;
+  const db = getDb();
+
+  const conditions = ["direction='passiva'"];
+  const params = [];
+
+  if (years) {
+    const arr = years.split(',').map(y => parseInt(y)).filter(y => !isNaN(y));
+    if (arr.length) { conditions.push(`year IN (${arr.map(() => '?').join(',')})`); params.push(...arr); }
+  }
+  if (months) {
+    const arr = months.split(',').map(m => parseInt(m)).filter(m => !isNaN(m) && m >= 1 && m <= 12);
+    if (arr.length) { conditions.push(`month IN (${arr.map(() => '?').join(',')})`); params.push(...arr); }
+  }
+  if (docType) { conditions.push('document_type = ?'); params.push(docType); }
+  if (req.query.supplier) { conditions.push('supplier_name = ?'); params.push(req.query.supplier); }
+
+  const where = 'WHERE ' + conditions.join(' AND ');
+  const row = db.prepare(`
+    SELECT COUNT(*) as count,
+           SUM(taxable_amount) as sum_taxable,
+           SUM(tax_amount) as sum_tax,
+           SUM(total_amount) as sum_total
+    FROM invoices ${where}
+  `).get(params);
+
+  res.json(row);
+});
+
 router.get('/', (req, res) => {
   const db = getDb();
 
