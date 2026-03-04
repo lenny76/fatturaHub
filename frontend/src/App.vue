@@ -93,6 +93,17 @@
             >
               📅 Visibilità anni
             </button>
+            <button
+              @click="rebuildFts"
+              :disabled="rebuildingFts"
+              class="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50"
+            >
+              <span v-if="rebuildingFts">⏳ Ricostruzione...</span>
+              <span v-else-if="rebuildFtsResult" :class="rebuildFtsResult.ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                {{ rebuildFtsResult.ok ? `✓ Indice ricostruito (${rebuildFtsResult.indexed} fatture)` : `✗ ${rebuildFtsResult.error}` }}
+              </span>
+              <span v-else>🔍 Ricostruisci indice ricerca</span>
+            </button>
             <div class="border-t border-gray-100 dark:border-gray-700 my-1" />
             <button
               @click="resetAllData"
@@ -311,6 +322,7 @@
               <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
                 <li>• <strong class="text-gray-700 dark:text-gray-300">Visibilità anni</strong>: nasconde anni dalla toolbar e dai risultati</li>
                 <li>• <strong class="text-gray-700 dark:text-gray-300">Tema</strong>: chiaro/scuro, persistito in localStorage</li>
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Ricostruisci indice ricerca</strong>: rigenera l'indice FTS5 da zero; utile se la ricerca testuale restituisce risultati mancanti o inconsistenti</li>
                 <li>• <strong class="text-gray-700 dark:text-gray-300">Elimina tutti i dati</strong>: reset completo con doppia conferma</li>
               </ul>
             </div>
@@ -447,6 +459,8 @@ const isDark = ref(false);
 const updateAvailable = ref(false);
 const latestVersion = ref('');
 const currentVersion = ref('');
+const rebuildingFts = ref(false);
+const rebuildFtsResult = ref(null);
 
 function toggleDark() {
   isDark.value = !isDark.value;
@@ -592,6 +606,20 @@ function clearSearch() {
   searchQ.value = '';
   store.setFilter('q', '');
   store.fetchList();
+}
+
+async function rebuildFts() {
+  rebuildingFts.value = true;
+  rebuildFtsResult.value = null;
+  try {
+    const { data } = await api.post('/admin/rebuild-fts');
+    rebuildFtsResult.value = { ok: true, indexed: data.indexed };
+  } catch (err) {
+    rebuildFtsResult.value = { ok: false, error: err.response?.data?.error || err.message };
+  } finally {
+    rebuildingFts.value = false;
+    setTimeout(() => { rebuildFtsResult.value = null; }, 5000);
+  }
 }
 
 function resetAllData() {

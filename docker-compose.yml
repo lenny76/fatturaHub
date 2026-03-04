@@ -12,4 +12,7 @@ services:
       - DB_PATH=/app/data/db/fatturahub.db
       - FILES_PATH=/app/data/files
     volumes:
-      - ./data:/app/data
+      - fatturahub_data:/app/data
+
+volumes:
+  fatturahub_data:
