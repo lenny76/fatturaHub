@@ -130,6 +130,20 @@
           {{ m }}
         </button>
 
+        <template v-if="store.docTypes.length">
+          <div class="w-px h-4 bg-gray-200 dark:bg-gray-600 mx-2" />
+          <!-- Tipo documento -->
+          <select
+            v-model="selectedDocType"
+            @change="applyDocType"
+            class="toolbar-select"
+            title="Filtra per tipo documento"
+          >
+            <option value="">Tipo: tutti</option>
+            <option v-for="dt in store.docTypes" :key="dt" :value="dt">{{ dt }}</option>
+          </select>
+        </template>
+
         <!-- Reset filtri -->
         <button
           v-if="hasActiveFilters"
@@ -148,8 +162,14 @@
     </div>
 
     <!-- ── Footer ── -->
-    <footer class="flex-none h-6 flex items-center justify-center bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500 select-none">
-      © 2026 Lenny76 &nbsp;·&nbsp; <a href="https://fatturahub.lenny76.com" target="_blank" rel="noopener" class="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">fatturahub.lenny76.com</a>
+    <footer class="flex-none h-6 flex items-center justify-center bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500 select-none gap-2">
+      <span>© 2026 Lenny76</span>
+      <span>·</span>
+      <a href="https://fatturahub.lenny76.com" target="_blank" rel="noopener" class="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">fatturahub.lenny76.com</a>
+      <template v-if="currentVersion">
+        <span>·</span>
+        <span>v{{ currentVersion }}</span>
+      </template>
     </footer>
 
     <!-- ── Upload modal ── -->
@@ -169,6 +189,7 @@ const showSettings = ref(false);
 const isDark = ref(false);
 const updateAvailable = ref(false);
 const latestVersion = ref('');
+const currentVersion = ref('');
 
 function toggleDark() {
   isDark.value = !isDark.value;
@@ -177,11 +198,12 @@ function toggleDark() {
 }
 const selectedYears = ref([]);
 const selectedMonths = ref([]);
+const selectedDocType = ref('');
 const searchQ = ref('');
 
 const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
-const hasActiveFilters = computed(() => selectedYears.value.length > 0 || selectedMonths.value.length > 0);
+const hasActiveFilters = computed(() => selectedYears.value.length > 0 || selectedMonths.value.length > 0 || !!selectedDocType.value);
 
 function saveFilters() {
   localStorage.setItem('fh_years', JSON.stringify(selectedYears.value));
@@ -223,12 +245,19 @@ function applyFilters() {
   store.fetchList();
 }
 
+function applyDocType() {
+  store.setFilter('docType', selectedDocType.value);
+  store.fetchList();
+}
+
 function resetFilters() {
   selectedYears.value = [];
   selectedMonths.value = [];
+  selectedDocType.value = '';
   searchQ.value = '';
   store.setFilter('years', '');
   store.setFilter('months', '');
+  store.setFilter('docType', '');
   store.setFilter('q', '');
   saveFilters();
   store.fetchList();
@@ -256,6 +285,7 @@ onMounted(async () => {
 
   try {
     const { data } = await api.get('/version');
+    currentVersion.value = data.current;
     if (data.updateAvailable) {
       updateAvailable.value = true;
       latestVersion.value = data.latest;
@@ -290,6 +320,7 @@ async function resetAllData() {
     store.resetFilters();
     selectedYears.value = [];
     selectedMonths.value = [];
+    selectedDocType.value = '';
     searchQ.value = '';
     saveFilters();
     await store.fetchStats();

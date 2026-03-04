@@ -173,7 +173,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 
 import { useInvoicesStore } from '@/stores/invoices';
 import InvoiceViewer from '@/components/InvoiceViewer.vue';
@@ -199,6 +199,7 @@ const filteredSupplierList = computed(() => {
 const viewModes = [
   { val: 'semplificata', label: 'Semplificata' },
   { val: 'completa', label: 'Completa' },
+  { val: 'ministeriale', label: 'Ministeriale' },
 ];
 
 const totalPages = computed(() => Math.max(1, Math.ceil(store.total / store.filters.limit)));
@@ -211,7 +212,36 @@ async function fetchParties() {
   }
 }
 
-onMounted(fetchParties);
+function handleKeydown(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  const list = store.list;
+  if (!list.length) return;
+  const currentIndex = selectedId.value ? list.findIndex(i => i.id === selectedId.value) : -1;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (currentIndex < list.length - 1) {
+      selectInvoice(list[currentIndex + 1].id);
+    } else if (store.filters.page < totalPages.value) {
+      changePage(1).then(() => { if (store.list.length) selectInvoice(store.list[0].id); });
+    }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (currentIndex > 0) {
+      selectInvoice(list[currentIndex - 1].id);
+    } else if (store.filters.page > 1) {
+      changePage(-1).then(() => { if (store.list.length) selectInvoice(store.list[store.list.length - 1].id); });
+    }
+  }
+}
+
+onMounted(() => {
+  fetchParties();
+  document.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown);
+});
 watch(() => store.filters.years, fetchParties);
 watch(() => store.filters.months, fetchParties);
 watch(() => store.filters.q, fetchParties);
