@@ -116,6 +116,13 @@
         </table>
       </div>
 
+      <!-- Analysis bar -->
+      <div v-if="analisiData" class="flex-none flex items-center justify-between px-3 py-1 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 text-xs">
+        <span class="text-gray-400 dark:text-gray-500">Imponibile <span class="font-semibold text-blue-600 dark:text-blue-400">{{ fmtEur(analisiData.sum_taxable) }}</span></span>
+        <span class="text-gray-400 dark:text-gray-500">IVA <span class="font-semibold text-orange-600 dark:text-orange-400">{{ fmtEur(analisiData.sum_tax) }}</span></span>
+        <span class="text-gray-400 dark:text-gray-500">Totale <span class="font-semibold text-green-600 dark:text-green-400">{{ fmtEur(analisiData.sum_total) }}</span></span>
+      </div>
+
       <!-- Pagination bar -->
       <div class="flex-none flex items-center justify-between px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
         <span>{{ store.total }} fatture — pag. {{ store.filters.page }}/{{ totalPages }}</span>
@@ -248,6 +255,7 @@ import XmlViewer from '@/components/XmlViewer.vue';
 import api from '@/api';
 
 const store = useInvoicesStore();
+const analisiData = ref(null);
 const selectedId = ref(null);
 const showXml = ref(false);
 const showDeleteConfirm = ref(false);
@@ -324,6 +332,7 @@ watch(() => store.list, () => {
     selectedId.value = null;
   }
   fetchParties();
+  fetchAnalisi();
 });
 
 function selectInvoice(id) {
@@ -375,6 +384,22 @@ async function toggleSort(field) {
 function sortInd(field) {
   if (store.filters.sort !== field) return '';
   return store.filters.order === 'ASC' ? '↑' : '↓';
+}
+
+const fmtEur = v => v == null ? '—' : new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v);
+
+async function fetchAnalisi() {
+  try {
+    const params = {};
+    if (store.filters.years) params.years = store.filters.years;
+    if (store.filters.months) params.months = store.filters.months;
+    if (store.filters.docType) params.docType = store.filters.docType;
+    if (store.filters.supplier) params.supplier = store.filters.supplier;
+    const { data } = await api.get('/stats/analysis', { params });
+    analisiData.value = data;
+  } catch {
+    analisiData.value = null;
+  }
 }
 
 function formatCurrency(val) {

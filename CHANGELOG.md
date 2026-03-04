@@ -5,6 +5,16 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.2.4] - 2026-03-04
+
+### Aggiunto
+- **Barra di analisi importi**: sotto la lista fatture compare una riga con imponibile, IVA e totale complessivo. Si aggiorna automaticamente in base ai filtri attivi (anni, mesi, tipo documento, fornitore selezionato).
+
+### Fix
+- **Ricerca fornitori nella sidebar**: digitare un secondo termine di ricerca dopo aver selezionato un fornitore ora mostra correttamente tutti i fornitori disponibili, invece di restringere la ricerca a quello già selezionato.
+
+---
+
 ## [1.2.2] - 2026-03-04
 
 ### Aggiunto

@@ -49,7 +49,6 @@ export const useInvoicesStore = defineStore('invoices', () => {
   async function fetchParties() {
     const params = { years: filters.value.years, months: filters.value.months };
     if (filters.value.q) params.q = filters.value.q;
-    if (filters.value.supplier) params.supplier = filters.value.supplier;
     const { data } = await api.get('/invoices/parties', { params });
     return data.suppliers;
   }
