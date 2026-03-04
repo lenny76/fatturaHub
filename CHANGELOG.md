@@ -5,6 +5,16 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.2.2] - 2026-03-04
+
+### Aggiunto
+- **Guida integrata**: pulsante ⓘ nella toolbar apre un pannello con la panoramica di tutte le funzionalità dell'app (upload, ricerca, filtri, visualizzazione, allegati, fornitori, dashboard, impostazioni)
+
+### Fix
+- **Ordinamento lista fatture**: la selezione di data, fornitore, importo e numero fattura ora funziona correttamente anche in modalità ricerca e filtro fornitore (il parametro `sort`/`order` veniva ignorato dal backend in entrambi i rami di `search.js`)
+
+---
+
 ## [1.2.1] - 2026-03-04
 
 ### Fix

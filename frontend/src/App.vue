@@ -61,6 +61,13 @@
           </svg>
         </button>
 
+        <!-- Guida -->
+        <button @click="showHelp = true" class="toolbar-btn" title="Guida e funzionalità">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </button>
+
         <div class="w-px h-6 bg-gray-200 dark:bg-gray-600 mx-1" />
 
         <!-- Impostazioni -->
@@ -169,15 +176,153 @@
     </div>
 
     <!-- ── Footer ── -->
-    <footer class="flex-none h-6 flex items-center justify-center bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-400 dark:text-gray-500 select-none gap-2">
+    <footer class="flex-none h-6 flex items-center justify-center bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-[10px] text-gray-500 dark:text-gray-300 select-none gap-2">
       <span>© 2026 Lenny76</span>
       <span>·</span>
-      <a href="https://fatturahub.lenny76.com" target="_blank" rel="noopener" class="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">fatturahub.lenny76.com</a>
+      <a href="https://fatturahub.lenny76.com" target="_blank" rel="noopener" class="hover:text-gray-700 dark:hover:text-white transition-colors">fatturahub.lenny76.com</a>
       <template v-if="currentVersion">
         <span>·</span>
         <span>v{{ currentVersion }}</span>
       </template>
     </footer>
+
+    <!-- ── Help / Guida modal ── -->
+    <div v-if="showHelp" class="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-10 pb-6 px-4" @click.self="showHelp = false">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl flex flex-col max-h-full overflow-hidden">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex-none">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-800 dark:text-white">Guida a FatturaHub</h2>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Panoramica delle funzionalità disponibili</p>
+          </div>
+          <button @click="showHelp = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <!-- Body -->
+        <div class="overflow-y-auto p-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            <!-- Carica fatture -->
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-base">📂</span>
+                <span class="text-xs font-semibold text-gray-800 dark:text-white">Carica fatture</span>
+              </div>
+              <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <li>• Trascina una cartella o seleziona file singoli</li>
+                <li>• Supporta <strong class="text-gray-700 dark:text-gray-300">.xml</strong> e <strong class="text-gray-700 dark:text-gray-300">.p7m</strong> (CAdES)</li>
+                <li>• Upload in blocchi da 50 file con barra progresso</li>
+                <li>• Deduplicazione automatica via hash SHA256</li>
+              </ul>
+            </div>
+
+            <!-- Ricerca -->
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-base">🔍</span>
+                <span class="text-xs font-semibold text-gray-800 dark:text-white">Ricerca</span>
+              </div>
+              <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <li>• Ricerca full-text su descrizioni, fornitore e numero fattura</li>
+                <li>• Motore FTS5 SQLite — ricerca istantanea su grandi archivi</li>
+                <li>• Combinabile con filtri anno, mese e tipo documento</li>
+                <li>• Click su un fornitore nella sidebar per filtrare</li>
+              </ul>
+            </div>
+
+            <!-- Filtri -->
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-base">🗂</span>
+                <span class="text-xs font-semibold text-gray-800 dark:text-white">Filtri</span>
+              </div>
+              <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Anno</strong>: selezione multipla nella toolbar</li>
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Mese</strong>: selezione multipla (Gennaio–Dicembre)</li>
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Tipo documento</strong>: TD01, TD04, ecc.</li>
+                <li>• Pulsante <em>× Reset</em> per azzerare tutti i filtri attivi</li>
+                <li>• Filtri anno e mese persistiti in localStorage</li>
+              </ul>
+            </div>
+
+            <!-- Visualizzazione fatture -->
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-base">📄</span>
+                <span class="text-xs font-semibold text-gray-800 dark:text-white">Visualizzazione fatture</span>
+              </div>
+              <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Semplificata</strong>: campi principali, leggibile</li>
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Completa</strong>: righe, prezzi, IVA e pagamenti</li>
+                <li>• Visualizzatore XML raw con syntax highlighting</li>
+              </ul>
+            </div>
+
+            <!-- Allegati -->
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-base">📎</span>
+                <span class="text-xs font-semibold text-gray-800 dark:text-white">Allegati</span>
+              </div>
+              <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <li>• Rileva allegati embedded nel file XML FatturaPA</li>
+                <li>• Anteprima in-browser per PDF, immagini, XML, CSV, TXT</li>
+                <li>• Download diretto per tutti i formati</li>
+                <li>• Icona 📎 nell'elenco fatture quando presenti</li>
+              </ul>
+            </div>
+
+            <!-- Pannello fornitori -->
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-base">🏢</span>
+                <span class="text-xs font-semibold text-gray-800 dark:text-white">Pannello fornitori</span>
+              </div>
+              <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <li>• Sidebar sinistra con tutti i fornitori e conteggio fatture</li>
+                <li>• Click per filtrare l'elenco per fornitore</li>
+                <li>• Si aggiorna automaticamente ai filtri attivi</li>
+              </ul>
+            </div>
+
+            <!-- Dashboard -->
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-base">📊</span>
+                <span class="text-xs font-semibold text-gray-800 dark:text-white">Dashboard</span>
+              </div>
+              <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <li>• Totali imponibile, IVA e importo per anno</li>
+                <li>• Top 10 fornitori per importo</li>
+                <li>• Ultime importazioni</li>
+                <li>• Riepilogo per tipo documento</li>
+              </ul>
+            </div>
+
+            <!-- Impostazioni -->
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-base">⚙️</span>
+                <span class="text-xs font-semibold text-gray-800 dark:text-white">Impostazioni</span>
+              </div>
+              <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Visibilità anni</strong>: nasconde anni dalla toolbar e dai risultati</li>
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Tema</strong>: chiaro/scuro, persistito in localStorage</li>
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Elimina tutti i dati</strong>: reset completo con doppia conferma</li>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+        <!-- Footer -->
+        <div class="flex-none border-t border-gray-200 dark:border-gray-700 px-5 py-3 text-xs text-gray-400 dark:text-gray-500 text-center">
+          FatturaHub gestisce esclusivamente <strong class="text-gray-500 dark:text-gray-400">fatture passive (ricevute)</strong> in formato FatturaPA.
+        </div>
+      </div>
+    </div>
 
     <!-- ── Upload modal ── -->
     <UploadModal v-if="showUpload" @close="onUploadClose" />
@@ -292,6 +437,7 @@ import api from '@/api';
 
 const store = useInvoicesStore();
 const showUpload = ref(false);
+const showHelp = ref(false);
 const showSettings = ref(false);
 const showYearSettings = ref(false);
 const showDeleteConfirm = ref(false);
