@@ -5,7 +5,7 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
-## [Unreleased]
+## [1.3.0] - 2026-03-09
 
 ### Aggiunto
 - **Stampa fattura**: pulsante 🖨 nella toolbar del visualizzatore per stampare la fattura selezionata. Apre una finestra di stampa del browser con il contenuto della fattura (disponibile nelle modalità Semplificata e Completa).
