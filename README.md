@@ -2,8 +2,6 @@
 
 Gestore web di fatture elettroniche italiane (FatturaPA) — self-hosted, open source.
 
-**https://fatturahub.lenny76.com**
-
 Importa l'intero archivio di fatture passive (XML e XML.p7m) ricevute via SDI: vengono indicizzate in un database locale e diventano immediatamente ricercabili dal browser, da qualsiasi dispositivo della rete. Niente Java, niente cartelle da condividere manualmente.
 
 ## Funzionalità
