@@ -74,7 +74,8 @@ function parseFatturaPA(xmlString) {
   const invoiceNumber = String(datiGeneraliDoc?.['Numero'] || '');
   const invoiceDate = String(datiGeneraliDoc?.['Data'] || '');
   const documentType = String(datiGeneraliDoc?.['TipoDocumento'] || '');
-  const totalAmount = parseFloat(datiGeneraliDoc?.['ImportoTotaleDocumento']) || null;
+  const _rawTotal = parseFloat(datiGeneraliDoc?.['ImportoTotaleDocumento']);
+  const totalAmount = isNaN(_rawTotal) ? null : _rawTotal;
   const year = invoiceDate ? parseInt(invoiceDate.split('-')[0]) : null;
   const month = invoiceDate ? parseInt(invoiceDate.split('-')[1]) : null;
 
@@ -95,8 +96,13 @@ function parseFatturaPA(xmlString) {
   // --- Tax summary ---
   const rawRiepilogo = datiBeniServizi?.['DatiRiepilogo'] || [];
   const riepilogo = Array.isArray(rawRiepilogo) ? rawRiepilogo : [rawRiepilogo];
-  const taxableAmount = riepilogo.reduce((s, r) => s + (parseFloat(r?.['ImponibileImporto']) || 0), 0) || null;
-  const taxAmount = riepilogo.reduce((s, r) => s + (parseFloat(r?.['Imposta']) || 0), 0) || null;
+  // null solo se DatiRiepilogo è assente; 0 è un valore valido (es. TD27)
+  const taxableAmount = riepilogo.length === 0
+    ? null
+    : riepilogo.reduce((s, r) => s + (parseFloat(r?.['ImponibileImporto']) || 0), 0);
+  const taxAmount = riepilogo.length === 0
+    ? null
+    : riepilogo.reduce((s, r) => s + (parseFloat(r?.['Imposta']) || 0), 0);
 
   return {
     invoice: {
