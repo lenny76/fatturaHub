@@ -228,13 +228,30 @@
 
           <div class="flex-1" />
           <button @click="toggleXml" :title="showXml ? 'Visualizza fattura' : 'Visualizza XML originale'" class="action-btn">{{ showXml ? '📄' : '</>' }}</button>
+          <button v-if="!showXml" @click="invoiceViewerRef?.print()" title="Stampa fattura" class="action-btn">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+            </svg>
+          </button>
+          <button
+            v-if="!showXml"
+            @click="invoiceViewerRef?.generatePdf()"
+            :disabled="invoiceViewerRef?.pdfGenerating"
+            title="Scarica PDF"
+            class="action-btn disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6"/>
+            </svg>
+          </button>
           <a :href="`/api/invoices/${selectedId}/download`" title="Scarica file originale" class="action-btn">⬇</a>
           <button @click="deleteSelected" title="Elimina fattura" class="action-btn text-red-600 hover:bg-red-50">🗑</button>
         </div>
 
         <div class="flex-1 overflow-auto p-2 sm:p-4">
           <XmlViewer v-if="showXml" :invoice-id="selectedId" />
-          <InvoiceViewer v-else :invoice-id="selectedId" :mode="viewMode" />
+          <InvoiceViewer v-else ref="invoiceViewerRef" :invoice-id="selectedId" :mode="viewMode" />
         </div>
       </template>
 
@@ -253,6 +270,8 @@ import { useInvoicesStore } from '@/stores/invoices';
 import InvoiceViewer from '@/components/InvoiceViewer.vue';
 import XmlViewer from '@/components/XmlViewer.vue';
 import api from '@/api';
+
+const invoiceViewerRef = ref(null);
 
 const store = useInvoicesStore();
 const analisiData = ref(null);

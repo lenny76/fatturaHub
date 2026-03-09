@@ -58,6 +58,7 @@
     <!-- Ministeriale: XSLT in iframe per rendering completo con CSS -->
     <iframe
       v-else-if="iframeSrcDoc"
+      ref="iframeRef"
       :srcdoc="iframeSrcDoc"
       class="flex-1 w-full border-0"
       sandbox="allow-scripts"
@@ -130,6 +131,8 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import api from '@/api';
 
+const iframeRef = ref(null);
+
 const props = defineProps({
   invoiceId: [String, Number],
   mode: { type: String, default: 'semplificata' },
@@ -142,7 +145,8 @@ const error = ref(null);
 const filename = ref('');
 const attachments = ref([]);
 const previewAtt = ref(null);
-const previewUrl = ref(null);   // Blob URL per l'anteprima (evita interferenze Content-Disposition)
+const previewUrl = ref(null);
+const cachedXml = ref('');   // Blob URL per l'anteprima (evita interferenze Content-Disposition)
 
 // Formati che il browser può visualizzare inline in iframe o <img>
 const PREVIEWABLE = new Set(['PDF', 'PNG', 'JPG', 'JPEG', 'XML', 'TXT', 'CSV']);
@@ -181,6 +185,7 @@ async function render() {
   error.value = null;
   iframeSrcDoc.value = '';
   rendered.value = '';
+  cachedXml.value = '';
   attachments.value = [];
   previewAtt.value = null;
 
@@ -190,6 +195,7 @@ async function render() {
 
     // Fetch XML per tutti i modi (serve anche per gli allegati in ministeriale)
     const { data: xmlString } = await api.get(`/invoices/${props.invoiceId}/xml`, { responseType: 'text' });
+    cachedXml.value = xmlString;
     attachments.value = parseAttachments(xmlString);
 
     if (props.mode === 'ministeriale') {
@@ -228,7 +234,7 @@ function parseXmlWithNs(xmlString) {
   return parser.parseFromString(stripped, 'application/xml');
 }
 
-function buildHtml(xmlString, full) {
+function buildHtml(xmlString, full, forPdf = false) {
   const doc = parseXmlWithNs(xmlString);
 
   const parseError = doc.querySelector('parsererror');
@@ -282,14 +288,14 @@ function buildHtml(xmlString, full) {
     .t th{background:#eee;padding:3px 6px;border:1px solid #ccc;text-align:left;white-space:nowrap;font-size:10px}
     .t td{padding:3px 6px;border:1px solid #e0e0e0;vertical-align:top}
     .r{text-align:right}.fw{font-weight:600}
-    .sec{font-size:10px;font-weight:700;color:#555;margin:10px 0 3px;text-transform:uppercase;border-bottom:1px solid #ddd;padding-bottom:2px}
-    .lbl{color:#888;font-size:10px}
-    :root.dark .inv{color:#e5e7eb}
+    .sec{font-size:10px;font-weight:700;color:${forPdf ? '#222' : '#555'};margin:10px 0 3px;text-transform:uppercase;border-bottom:1px solid #ddd;padding-bottom:2px}
+    .lbl{color:${forPdf ? '#444' : '#888'};font-size:10px}
+    ${forPdf ? '' : `:root.dark .inv{color:#e5e7eb}
     :root.dark .t th{background:#374151;border-color:#4b5563;color:#d1d5db}
     :root.dark .t td{border-color:#374151}
     :root.dark .t tr{border-color:#374151}
     :root.dark .sec{color:#9ca3af;border-color:#374151}
-    :root.dark .lbl{color:#6b7280}
+    :root.dark .lbl{color:#6b7280}`}
   </style>
   <div class="inv">
     <table class="t">
@@ -361,6 +367,51 @@ watch(previewAtt, async (att) => {
     console.error('[preview] fetch error:', e);
   }
 });
+
+function print() {
+  if (!rendered.value) return;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fattura</title></head><body style="margin:0;padding:16px">${rendered.value}</body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
+  win.close();
+}
+
+const pdfGenerating = ref(false);
+
+async function generatePdf() {
+  if (!cachedXml.value || pdfGenerating.value) return;
+  pdfGenerating.value = true;
+  try {
+    const html2pdf = (await import('html2pdf.js')).default;
+    const el = document.createElement('div');
+    el.style.cssText = 'padding:8px;background:#fff;color:#1a1a1a;width:710px';
+    // Build a PDF-optimised version: darker label/section colors, no dark-mode CSS
+    el.innerHTML = buildHtml(cachedXml.value, props.mode === 'completa', true);
+    document.body.appendChild(el);
+    const pdfFilename = (filename.value || 'fattura').replace(/\.[^.]+$/, '') + '.pdf';
+    await html2pdf().set({
+      margin: 10,
+      filename: pdfFilename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        onclone: (clonedDoc) => {
+          clonedDoc.documentElement.classList.remove('dark');
+        },
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    }).from(el).save();
+    document.body.removeChild(el);
+  } finally {
+    pdfGenerating.value = false;
+  }
+}
+
+defineExpose({ print, generatePdf, pdfGenerating });
 
 onMounted(render);
 onUnmounted(revokePreviewUrl);
