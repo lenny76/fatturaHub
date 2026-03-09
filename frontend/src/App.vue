@@ -104,6 +104,17 @@
               </span>
               <span v-else>🔍 Ricostruisci indice ricerca</span>
             </button>
+            <button
+              @click="recalculateAmounts"
+              :disabled="recalculating"
+              class="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50"
+            >
+              <span v-if="recalculating">⏳ Ricalcolo...</span>
+              <span v-else-if="recalcResult" :class="recalcResult.ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                {{ recalcResult.ok ? `✓ Aggiornate ${recalcResult.updated} fatture` : `✗ ${recalcResult.error}` }}
+              </span>
+              <span v-else>💶 Ricalcola importi</span>
+            </button>
             <div class="border-t border-gray-100 dark:border-gray-700 my-1" />
             <button
               @click="resetAllData"
@@ -461,6 +472,8 @@ const latestVersion = ref('');
 const currentVersion = ref('');
 const rebuildingFts = ref(false);
 const rebuildFtsResult = ref(null);
+const recalculating = ref(false);
+const recalcResult = ref(null);
 
 function toggleDark() {
   isDark.value = !isDark.value;
@@ -606,6 +619,21 @@ function clearSearch() {
   searchQ.value = '';
   store.setFilter('q', '');
   store.fetchList();
+}
+
+async function recalculateAmounts() {
+  recalculating.value = true;
+  recalcResult.value = null;
+  try {
+    const { data } = await api.post('/admin/recalculate-amounts');
+    recalcResult.value = { ok: true, updated: data.updated };
+    applyFilters();
+  } catch (err) {
+    recalcResult.value = { ok: false, error: err.response?.data?.error || err.message };
+  } finally {
+    recalculating.value = false;
+    setTimeout(() => { recalcResult.value = null; }, 5000);
+  }
 }
 
 async function rebuildFts() {

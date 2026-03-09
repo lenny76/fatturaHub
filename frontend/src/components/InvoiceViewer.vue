@@ -160,6 +160,38 @@ function getFormato(att) {
   return m ? m[1] : '';
 }
 
+// Mappa codici tipo documento FatturaPA → descrizione italiana
+const DOC_TYPES = {
+  TD01: 'Fattura',
+  TD02: 'Acconto/anticipo su fattura',
+  TD03: 'Acconto/anticipo su parcella',
+  TD04: 'Nota di credito',
+  TD05: 'Nota di debito',
+  TD06: 'Parcella',
+  TD07: 'Fattura semplificata',
+  TD08: 'Nota di credito semplificata',
+  TD09: 'Nota di debito semplificata',
+  TD16: 'Integrazione fattura reverse charge interno',
+  TD17: 'Integrazione/autofattura acquisto servizi estero',
+  TD18: 'Integrazione acquisto beni intracomunitari',
+  TD19: 'Integrazione acquisto beni ex art.17 c.2 DPR 633/72',
+  TD20: 'Autofattura per regolarizzazione e integrazione',
+  TD21: 'Autofattura per splafonamento',
+  TD22: 'Estrazione beni da deposito IVA',
+  TD23: 'Estrazione beni da deposito IVA con versamento',
+  TD24: 'Fattura differita art.21 c.4 lett.a DPR 633/72',
+  TD25: 'Fattura differita art.21 c.4 terzo periodo DPR 633/72',
+  TD26: 'Cessione beni ammortizzabili e passaggi interni',
+  TD27: 'Fattura per autoconsumo o cessioni gratuite senza rivalsa',
+  TD28: 'Acquisti da San Marino con IVA (carta di debito)',
+};
+
+function docTypeLabel(code) {
+  if (!code) return '';
+  const desc = DOC_TYPES[code.toUpperCase()];
+  return desc ? `${code} – ${desc}` : code;
+}
+
 // getElementsByTagName is namespace-agnostic (unlike querySelector)
 function getText(node, tag) {
   return node?.getElementsByTagName(tag)?.[0]?.textContent?.trim() || '';
@@ -313,7 +345,7 @@ function buildHtml(xmlString, full, forPdf = false) {
       </tr>
       <tr>
         <td>N. <strong>${getText(datiDoc, 'Numero')}</strong> del <strong>${getText(datiDoc, 'Data')}</strong></td>
-        <td>Tipo: <strong>${getText(datiDoc, 'TipoDocumento')}</strong> &nbsp; Valuta: <strong>${getText(datiDoc, 'Divisa') || 'EUR'}</strong></td>
+        <td>Tipo: <strong>${docTypeLabel(getText(datiDoc, 'TipoDocumento'))}</strong> &nbsp; Valuta: <strong>${getText(datiDoc, 'Divisa') || 'EUR'}</strong></td>
       </tr>
     </table>
 
