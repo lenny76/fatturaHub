@@ -7,8 +7,17 @@ e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
 ## [Unreleased]
 
+---
+
+## [1.2.6] - 2026-03-09
+
 ### Aggiunto
 - **Stampa fattura**: pulsante 🖨 nella toolbar del visualizzatore per stampare la fattura selezionata. Apre una finestra di stampa del browser con il contenuto della fattura (disponibile nelle modalità Semplificata e Completa).
+- **Descrizione tipo documento**: il tipo di documento (es. TD01, TD27) viene ora visualizzato con la relativa descrizione italiana (es. `TD01 – Fattura`, `TD27 – Fattura per autoconsumo o cessioni gratuite senza rivalsa`).
+- **Ricalcola importi**: nuova opzione nel menu impostazioni (⚙) che ricalcola gli importi di tutte le fatture già importate senza doverle re-importare. Utile dopo aggiornamenti che correggono il parsing degli importi.
+
+### Fix
+- **Importi zero non visualizzati (TD27 e simili)**: le fatture con importo pari a zero (tipicamente autoconsumo e cessioni gratuite) venivano salvate con importo vuoto e mostravano `—` nell'elenco invece di `€ 0,00`. Ora l'importo zero è correttamente riconosciuto e visualizzato.
 
 ---
 
