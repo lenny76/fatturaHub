@@ -327,7 +327,7 @@
       border-top:1px solid rgba(255,255,255,.2);
     }
     .hero-stat strong { display:block; font-size:2rem; font-weight:800; }
-    .hero-stat span   { font-size:.88rem; opacity:.72; }
+    .hero-stat span   { font-size:.88rem; color: rgba(255,255,255,.85); }
 
     /* ─── SECTION COMMON ──────────────────────────────── */
     section { padding:5.5rem 1.5rem; }
@@ -346,6 +346,10 @@
       color:var(--text); margin-bottom:.7rem;
     }
     .section-header p { color:var(--text-muted); font-size:1.05rem; max-width:580px; margin:0 auto; }
+    /* su sfondo #f0f9ff il --text-muted (#64748b) dà contrasto 4.33:1 < 4.5 richiesto */
+    #perche .section-header p,
+    #confronto .section-header p,
+    #come-funziona .section-header p { color: #475569; }
 
     /* ─── PERCHÉ ──────────────────────────────────────── */
     #perche { background: var(--bg-alt); }
@@ -353,6 +357,7 @@
       max-width: 780px; margin: 0 auto 3.5rem; text-align: center;
       font-size: 1.1rem; color: var(--text-muted); line-height: 1.75;
     }
+    .perche-intro { color: #475569; }
     .perche-intro strong { color: var(--text); }
     .perche-grid {
       display: grid;
@@ -428,12 +433,12 @@
     .app-brand { font-size:.88rem; font-weight:800; color:#60a5fa; white-space:nowrap; }
     .app-search {
       background:#1e293b; border:1px solid #334155; border-radius:6px;
-      padding:5px 12px; font-size:.76rem; color:#64748b; max-width:260px; flex:1;
+      padding:5px 12px; font-size:.76rem; color:#94a3b8; max-width:260px; flex:1;
     }
     .year-pills { display:flex; gap:5px; margin-left:auto; }
     .ypill {
       background:#1e293b; border:1px solid #334155;
-      border-radius:5px; padding:3px 9px; font-size:.7rem; color:#64748b;
+      border-radius:5px; padding:3px 9px; font-size:.7rem; color:#94a3b8;
     }
     .ypill.on { background:#1d4ed8; border-color:#1d4ed8; color:#fff; }
     .app-body { display:flex; height:400px; }
@@ -442,26 +447,26 @@
     .p-view { flex:1; background:#151f32; overflow:hidden; }
     .panel-hdr {
       padding:9px 12px; font-size:.67rem; font-weight:700;
-      color:#475569; text-transform:uppercase; letter-spacing:.08em;
+      color:#94a3b8; text-transform:uppercase; letter-spacing:.08em;
       border-bottom:1px solid #1e293b;
     }
     .sup-item { padding:9px 12px; border-bottom:1px solid #1e293b; }
     .sup-item .sn { font-size:.72rem; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .sup-item .sc { font-size:.63rem; color:#475569; margin-top:2px; }
+    .sup-item .sc { font-size:.63rem; color:#94a3b8; margin-top:2px; }
     .sup-item.on { background:#172443; }
     .sup-item.on .sn { color:#60a5fa; font-weight:600; }
     .inv-item { padding:9px 13px; border-bottom:1px solid #1e293b; }
     .inv-item.on { background:#1a2f50; border-left:3px solid #3b82f6; padding-left:10px; }
     .inv-sup  { font-size:.73rem; font-weight:600; color:#93c5fd; margin-bottom:2px; }
     .inv-meta { display:flex; justify-content:space-between; }
-    .inv-n,.inv-d { font-size:.63rem; color:#475569; }
+    .inv-n,.inv-d { font-size:.63rem; color:#94a3b8; }
     .inv-amt { font-size:.8rem; font-weight:700; color:#34d399; margin-top:3px; }
     .view-tb {
       background:#0f172a; padding:8px 13px;
       display:flex; align-items:center; gap:6px;
       border-bottom:1px solid #1e293b;
     }
-    .vtab { padding:3px 10px; border-radius:5px; font-size:.69rem; color:#64748b; cursor:pointer; }
+    .vtab { padding:3px 10px; border-radius:5px; font-size:.69rem; color:#94a3b8; cursor:pointer; }
     .vtab.on { background:#1d4ed8; color:#fff; }
     .vbody { padding:14px; }
     .inv-box {
@@ -470,10 +475,10 @@
     }
     .inv-box h4 { font-size:.78rem; font-weight:700; color:#60a5fa; margin-bottom:8px; }
     .inv-rows { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-    .inv-row .lbl { font-size:.63rem; color:#475569; }
+    .inv-row .lbl { font-size:.63rem; color:#94a3b8; }
     .inv-row .val { font-size:.71rem; color:#94a3b8; }
     .inv-tbl { width:100%; border-collapse:collapse; font-size:.63rem; }
-    .inv-tbl th { background:#0f172a; color:#475569; padding:5px 7px; text-align:left; font-weight:600; }
+    .inv-tbl th { background:#0f172a; color:#94a3b8; padding:5px 7px; text-align:left; font-weight:600; }
     .inv-tbl td { color:#94a3b8; padding:5px 7px; border-bottom:1px solid #1e293b; }
     .inv-tbl .ac { color:#34d399; text-align:right; font-weight:600; }
 
@@ -517,7 +522,7 @@
     .terminal-body { padding: 1.25rem 1.5rem; font-family: monospace; font-size:.85rem; line-height:1.9; }
     .tl-prompt { color: #3b82f6; user-select: none; }
     .tl-cmd    { color: #e2e8f0; }
-    .tl-comment{ color: #6e7681; }
+    .tl-comment{ color: #8b949e; }
     .tl-ok     { color: #3fb950; }
     .install-note {
       max-width: 900px; margin: 1.5rem auto 0;
@@ -591,7 +596,7 @@
     .check-y { color: #16a34a; font-size: 1.1rem; }
     .check-n { color: #dc2626; font-size: 1.1rem; }
     .check-p { color: var(--text-muted); font-size: .85rem; }
-    .compare-note { text-align: center; margin-top: 1.25rem; font-size: .8rem; color: var(--text-muted); }
+    .compare-note { text-align: center; margin-top: 1.25rem; font-size: .8rem; color: var(--text); }
     .gh-badges { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:1.75rem; }
     .gh-badges img { height: 22px; border-radius: 4px; }
 
@@ -972,8 +977,8 @@
       <p>Tre pannelli affiancati: fornitori, elenco fatture, visualizzatore. Tutto in una singola schermata.</p>
     </div>
 
-    <div class="app-window fade-in">
-      <div class="app-titlebar">
+    <div class="app-window fade-in" role="img" aria-label="Anteprima dell'interfaccia FatturaHub: tre pannelli affiancati con elenco fornitori, lista fatture e visualizzatore con dettaglio della fattura selezionata">
+      <div class="app-titlebar" aria-hidden="true">
         <div class="window-dots">
           <div class="w-dot d-red"></div>
           <div class="w-dot d-yellow"></div>
@@ -1381,7 +1386,7 @@
     <a href="https://github.com/lenny76/FatturaHub" target="_blank" rel="noopener">GitHub</a>
     &nbsp;·&nbsp; Licenza MIT &nbsp;·&nbsp; © 2026 Lenny76
   </p>
-  <p style="margin-top:.5rem;font-size:.78rem;opacity:.5;">
+  <p style="margin-top:.5rem;font-size:.78rem;color:#94a3b8;">
     Alternativa open source ad <a href="https://www.assosoftware.it/servizi-offerti/assoinvoice/" target="_blank" rel="noopener">AssoInvoice</a> &nbsp;·&nbsp;
     FatturaHub non è affiliato con l'Agenzia delle Entrate né con AssoSoftware.
   </p>
