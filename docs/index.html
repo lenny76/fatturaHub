@@ -9,9 +9,16 @@
   <meta name="robots" content="index, follow">
   <meta name="keywords" content="fatture elettroniche, FatturaPA, gestione fatture passive, visualizzatore fatture XML, P7M firma digitale, SDI, allegati fattura, open source, self-hosted, gratis, software fatture locali, archivio fatture elettroniche, alternativa AssoInvoice, AssoInvoice open source, gestione fatture browser, fatture passive PC, visualizza fatture XML">
 
-  <!-- Favicon -->
+  <!-- Favicon & App icons -->
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="shortcut icon" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="FatturaHub">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <!-- Sitemap -->
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml">
 
   <!-- Canonical -->
   <link rel="canonical" href="https://fatturahub.lenny76.com/">
@@ -34,12 +41,17 @@
   <meta property="og:site_name" content="FatturaHub">
   <meta property="og:url" content="https://fatturahub.lenny76.com/">
   <meta property="og:image" content="https://fatturahub.lenny76.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:alt" content="FatturaHub — Gestore open source di fatture elettroniche FatturaPA">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="FatturaHub — Gestore Open Source di Fatture Elettroniche FatturaPA">
   <meta name="twitter:description" content="Alternativa open source ad AssoInvoice: gestisci fatture FatturaPA in locale con database SQLite. Ricerca full-text, accessibile da browser, senza Java, gratis.">
   <meta name="twitter:image" content="https://fatturahub.lenny76.com/og-image.png">
+  <meta name="twitter:image:alt" content="FatturaHub — Gestore open source di fatture elettroniche FatturaPA">
 
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
@@ -598,12 +610,35 @@
     }
     .fade-in.visible { opacity:1; transform:translateY(0); }
 
+    /* ─── HAMBURGER MENU ──────────────────────────────── */
+    .nav-hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      cursor: pointer; padding: 6px; background: none; border: none;
+      border-radius: 6px; transition: background .2s;
+    }
+    .nav-hamburger:hover { background: #f1f5f9; }
+    .nav-hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: var(--text); border-radius: 2px; transition: all .3s;
+    }
+
     /* ─── RESPONSIVE ──────────────────────────────────── */
     @media (max-width:900px) {
       .install-grid { grid-template-columns: 1fr; }
     }
     @media (max-width:768px) {
-      .nav-links { display:none; }
+      .nav-hamburger { display: flex; }
+      .nav-links {
+        display: none; position: absolute; top: 64px; left: 0; right: 0;
+        background: rgba(255,255,255,.98); backdrop-filter: blur(12px);
+        flex-direction: column; padding: .75rem 1.5rem;
+        border-bottom: 1px solid var(--border); gap: 0;
+        box-shadow: 0 8px 24px rgba(0,0,0,.08);
+      }
+      .nav-links.open { display: flex; }
+      .nav-links li { padding: .7rem 0; border-bottom: 1px solid var(--border); }
+      .nav-links li:last-child { border-bottom: none; }
+      .nav-links a { font-size: 1rem; }
       .p-supp { display:none; }
       .p-list { width:220px; }
       .app-body { height:340px; }
@@ -614,6 +649,7 @@
       .hero-stats { gap:1.5rem; }
     }
   </style>
+  <noscript><style>.fade-in{opacity:1!important;transform:none!important}</style></noscript>
 </head>
 <body>
 
@@ -638,14 +674,17 @@
       </svg>
       FatturaHub
     </a>
-    <ul class="nav-links">
+    <ul class="nav-links" id="nav-links">
       <li><a href="#features">Funzionalità</a></li>
       <li><a href="#confronto">Confronto</a></li>
       <li><a href="#mockup">Anteprima</a></li>
       <li><a href="#installa">Installa</a></li>
       <li><a href="#faq">FAQ</a></li>
-      <li><a href="https://github.com/lenny76/FatturaHub" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="https://github.com/lenny76/FatturaHub" target="_blank" rel="noopener me">GitHub</a></li>
     </ul>
+    <button class="nav-hamburger" id="hamburger" aria-label="Apri menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </button>
     <a href="https://github.com/lenny76/FatturaHub" target="_blank" rel="noopener" class="btn btn-primary">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
       Scarica gratis
@@ -653,6 +692,7 @@
   </div>
 </nav>
 
+<main>
 <!-- ═══ HERO ═══════════════════════════════════════════════ -->
 <section id="hero">
   <div class="container">
@@ -1332,6 +1372,8 @@
   </div>
 </section>
 
+</main>
+
 <!-- ═══ FOOTER ═══════════════════════════════════════════ -->
 <footer>
   <p>
@@ -1346,6 +1388,18 @@
 </footer>
 
 <script>
+  /* ── Hamburger menu ── */
+  const hamburger = document.getElementById('hamburger');
+  const navLinks  = document.getElementById('nav-links');
+  hamburger.addEventListener('click', () => {
+    const isOpen = navLinks.classList.toggle('open');
+    hamburger.setAttribute('aria-expanded', isOpen);
+    hamburger.setAttribute('aria-label', isOpen ? 'Chiudi menu' : 'Apri menu');
+  });
+  navLinks.addEventListener('click', e => {
+    if (e.target.tagName === 'A') { navLinks.classList.remove('open'); hamburger.setAttribute('aria-expanded', 'false'); }
+  });
+
   /* ── Intersection Observer (scroll animations) ── */
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => {
