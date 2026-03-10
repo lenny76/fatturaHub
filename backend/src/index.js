@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { rateLimit } = require('express-rate-limit');
 const { initDb } = require('./db/schema');
 
 process.on('uncaughtException', (err) => {
@@ -24,6 +25,31 @@ const versionRouter = require('./routes/version');
 const app = express();
 const PORT = process.env.PORT || 5173;
 
+// Rate limiters
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Troppe richieste, riprova tra qualche minuto.' },
+});
+
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Troppi upload, riprova tra un minuto.' },
+});
+
+const adminLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Troppi comandi admin, riprova tra un\'ora.' },
+});
+
 app.use(cors());
 app.use(express.json());
 
@@ -31,12 +57,12 @@ app.use(express.json());
 app.use('/files', express.static(process.env.FILES_PATH || path.join(__dirname, '../../data/files')));
 
 // Routes
-app.use('/api/upload', uploadRouter);
-app.use('/api/invoices', invoicesRouter);
-app.use('/api/search', searchRouter);
-app.use('/api/stats', statsRouter);
-app.use('/api/admin', adminRouter);
-app.use('/api/version', versionRouter);
+app.use('/api/upload', uploadLimiter, uploadRouter);
+app.use('/api/invoices', apiLimiter, invoicesRouter);
+app.use('/api/search', apiLimiter, searchRouter);
+app.use('/api/stats', apiLimiter, statsRouter);
+app.use('/api/admin', adminLimiter, adminRouter);
+app.use('/api/version', apiLimiter, versionRouter);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

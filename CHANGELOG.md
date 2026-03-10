@@ -5,7 +5,25 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.3.1] - 2026-03-10
+
+### Sicurezza
+- **Rate limiting**: aggiunto limite di richieste su tutti gli endpoint API per prevenire attacchi DoS. Upload limitato a 60 richieste/minuto, comandi admin a 10/ora, restanti API a 500 ogni 15 minuti (`express-rate-limit`).
+
+### Fix
+- **Allineamento versione backend**: `backend/package.json` era rimasto alla versione precedente; ora allineato al numero di versione del progetto.
+
+---
+
 ## [1.3.0] - 2026-03-09
+
+### Aggiunto
+- **Stampa fattura**: pulsante 🖨 nella toolbar del visualizzatore per stampare la fattura selezionata. Apre una finestra di stampa del browser con il contenuto della fattura (disponibile nelle modalità Semplificata e Completa).
+- **Descrizione tipo documento**: il tipo di documento (es. TD01, TD27) viene ora visualizzato con la relativa descrizione italiana (es. `TD01 – Fattura`, `TD27 – Fattura per autoconsumo o cessioni gratuite senza rivalsa`).
+- **Ricalcola importi**: nuova opzione nel menu impostazioni (⚙) che ricalcola gli importi di tutte le fatture già importate senza doverle re-importare. Utile dopo aggiornamenti che correggono il parsing degli importi.
+
+### Fix
+- **Importi zero non visualizzati (TD27 e simili)**: le fatture con importo pari a zero (tipicamente autoconsumo e cessioni gratuite) venivano salvate con importo vuoto e mostravano `—` nell'elenco invece di `€ 0,00`. Ora l'importo zero è correttamente riconosciuto e visualizzato.
 
 ---
 
