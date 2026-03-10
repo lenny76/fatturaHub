@@ -4,22 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FatturaHub — Alternativa Open Source ad AssoInvoice per Fatture Elettroniche FatturaPA</title>
-  <meta name="description" content="FatturaHub: alternativa open source ad AssoInvoice per gestire fatture FatturaPA in locale. Indicizzazione database SQLite, ricerca full-text, accessibile da browser. Confronta con AssoInvoice: stessa funzionalità, più libertà.">
+  <meta name="description" content="FatturaHub: alternativa open source ad AssoInvoice per gestire fatture FatturaPA passive in locale. Database SQLite, ricerca full-text FTS5, file XML e P7M, accessibile da browser. Gratuito, senza Java, senza cloud.">
   <meta name="author" content="Lenny76">
   <meta name="robots" content="index, follow">
   <meta name="keywords" content="fatture elettroniche, FatturaPA, gestione fatture passive, visualizzatore fatture XML, P7M firma digitale, SDI, allegati fattura, open source, self-hosted, gratis, software fatture locali, archivio fatture elettroniche, alternativa AssoInvoice, AssoInvoice open source, gestione fatture browser, fatture passive PC, visualizza fatture XML">
 
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-TTQ6LD21MF"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-TTQ6LD21MF');
-  </script>
+  <!-- Favicon -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="shortcut icon" href="/favicon.svg">
 
   <!-- Canonical -->
   <link rel="canonical" href="https://fatturahub.lenny76.com/">
+
+  <!-- Performance hints -->
+  <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
+  <link rel="dns-prefetch" href="//github.com">
+  <link rel="dns-prefetch" href="//img.shields.io">
+
+  <!-- App meta -->
+  <meta name="theme-color" content="#1e40af">
+  <meta name="application-name" content="FatturaHub">
+  <meta name="referrer" content="no-referrer-when-downgrade">
 
   <!-- Open Graph -->
   <meta property="og:title" content="FatturaHub — Gestore Open Source di Fatture Elettroniche FatturaPA">
@@ -52,11 +57,15 @@
       "price": "0",
       "priceCurrency": "EUR"
     },
-    "url": "https://github.com/lenny76/FatturaHub",
-    "downloadUrl": "https://github.com/lenny76/FatturaHub",
+    "url": "https://fatturahub.lenny76.com/",
+    "downloadUrl": "https://github.com/lenny76/FatturaHub/releases/latest",
+    "codeRepository": "https://github.com/lenny76/FatturaHub",
+    "softwareVersion": "1.2.6",
+    "datePublished": "2025-01-01",
     "author": {
       "@type": "Person",
-      "name": "Lenny76"
+      "name": "Lenny76",
+      "url": "https://github.com/lenny76"
     },
     "license": "https://opensource.org/licenses/MIT",
     "isAccessibleForFree": true,
@@ -73,6 +82,25 @@
       "Dark mode",
       "Notifiche aggiornamenti automatiche",
       "Supporto Docker"
+    ]
+  }
+  </script>
+  <!-- WebSite Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "FatturaHub",
+    "url": "https://fatturahub.lenny76.com/",
+    "description": "Gestore open source self-hosted per fatture elettroniche FatturaPA — alternativa a AssoInvoice senza Java, con database SQLite e ricerca full-text.",
+    "inLanguage": "it",
+    "author": {
+      "@type": "Person",
+      "name": "Lenny76",
+      "url": "https://github.com/lenny76"
+    },
+    "sameAs": [
+      "https://github.com/lenny76/FatturaHub"
     ]
   }
   </script>
@@ -128,6 +156,30 @@
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "Gratuito al 100%, senza limiti di fatture, senza account, senza piani premium. FatturaHub è rilasciato sotto licenza MIT: puoi usarlo, modificarlo e distribuirlo liberamente, anche per uso commerciale."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Posso installarlo su un NAS, Raspberry Pi o server casalingo?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Sì. FatturaHub gira su qualsiasi dispositivo con Node.js 20+ o Docker — inclusi NAS Synology, QNAP, Raspberry Pi e mini-PC. Una volta avviato, è accessibile da tutti i computer della rete domestica o aziendale tramite browser, senza installare niente sugli altri dispositivi."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Come scarico le fatture passive dal portale SDI?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Accedi al cassetto fiscale su fatture e corrispettivi dell'Agenzia delle Entrate (o al portale del tuo intermediario) e scarica le fatture ricevute come file XML o P7M. Una volta scaricate, trascina l'intera cartella su FatturaHub per indicizzarle tutte in un colpo solo."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "FatturaHub gestisce le notifiche SDI (file NS, RC, MT)?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No — e intenzionalmente. FatturaHub riconosce e importa solo i file FatturaElettronica veri e propri. I file di notifica SDI come _RC_ (ricevuta di consegna), _NS_ (notifica di scarto) o _MT_ vengono ignorati automaticamente, senza creare record vuoti nel database."
         }
       }
     ]
@@ -511,6 +563,26 @@
       border-radius:8px; padding:6px 16px; font-size:.83rem; font-weight:600;
     }
 
+    /* ─── CONFRONTO ──────────────────────────────────────── */
+    #confronto { background: var(--bg-alt); }
+    .compare-wrap { max-width: 820px; margin: 0 auto; overflow-x: auto; }
+    .compare-tbl { width: 100%; border-collapse: collapse; font-size: .93rem; border-radius: 14px; overflow: hidden; border: 1.5px solid var(--border); }
+    .compare-tbl thead tr { background: #fff; }
+    .compare-tbl th { padding: .9rem 1.25rem; font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .07em; border-bottom: 2px solid var(--border); }
+    .compare-tbl td { padding: .85rem 1.25rem; border-top: 1px solid var(--border); vertical-align: middle; }
+    .compare-tbl tbody tr:hover td { background: #f8fafc; }
+    .col-feature { color: var(--text); font-weight: 500; font-size: .92rem; }
+    .col-fh  { text-align: center; font-weight: 600; width: 22%; }
+    .col-ai  { text-align: center; color: var(--text-muted); width: 22%; }
+    .col-hdr-fh { color: var(--primary); background: #eff6ff; }
+    .col-hdr-ai { color: var(--text-muted); }
+    .check-y { color: #16a34a; font-size: 1.1rem; }
+    .check-n { color: #dc2626; font-size: 1.1rem; }
+    .check-p { color: var(--text-muted); font-size: .85rem; }
+    .compare-note { text-align: center; margin-top: 1.25rem; font-size: .8rem; color: var(--text-muted); }
+    .gh-badges { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:1.75rem; }
+    .gh-badges img { height: 22px; border-radius: 4px; }
+
     /* ─── FOOTER ──────────────────────────────────────── */
     footer {
       background:var(--bg-dark); color:#94a3b8;
@@ -568,6 +640,7 @@
     </a>
     <ul class="nav-links">
       <li><a href="#features">Funzionalità</a></li>
+      <li><a href="#confronto">Confronto</a></li>
       <li><a href="#mockup">Anteprima</a></li>
       <li><a href="#installa">Installa</a></li>
       <li><a href="#faq">FAQ</a></li>
@@ -667,6 +740,86 @@
         </div>
       </div>
 
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CONFRONTO ════════════════════════════════════════ -->
+<section id="confronto">
+  <div class="container">
+    <div class="section-header fade-in">
+      <span class="section-tag">Confronto</span>
+      <h2>FatturaHub vs AssoInvoice</h2>
+      <p>Due strumenti gratuiti per le fatture FatturaPA. Ecco le differenze principali.</p>
+    </div>
+    <div class="compare-wrap fade-in">
+      <table class="compare-tbl">
+        <thead>
+          <tr>
+            <th style="width:56%">Caratteristica</th>
+            <th class="col-hdr-fh">⚡ FatturaHub</th>
+            <th class="col-hdr-ai">AssoInvoice</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-feature">Costo</td>
+            <td class="col-fh">Gratuito (MIT)</td>
+            <td class="col-ai">Gratuito</td>
+          </tr>
+          <tr>
+            <td class="col-feature">Open source e codice ispezionabile</td>
+            <td class="col-fh"><span class="check-y">✓</span></td>
+            <td class="col-ai"><span class="check-n">✗</span></td>
+          </tr>
+          <tr>
+            <td class="col-feature">Richiede Java (JRE)</td>
+            <td class="col-fh"><span class="check-y">No</span></td>
+            <td class="col-ai"><span class="check-p">Sì</span></td>
+          </tr>
+          <tr>
+            <td class="col-feature">Database persistente — indicizzazione una volta sola</td>
+            <td class="col-fh"><span class="check-y">✓ SQLite</span></td>
+            <td class="col-ai"><span class="check-n">✗</span></td>
+          </tr>
+          <tr>
+            <td class="col-feature">Accesso da browser e rete locale</td>
+            <td class="col-fh"><span class="check-y">✓</span></td>
+            <td class="col-ai"><span class="check-n">Solo locale</span></td>
+          </tr>
+          <tr>
+            <td class="col-feature">Ricerca full-text nelle descrizioni</td>
+            <td class="col-fh"><span class="check-y">✓ FTS5</span></td>
+            <td class="col-ai"><span class="check-p">Limitata</span></td>
+          </tr>
+          <tr>
+            <td class="col-feature">File P7M / CAdES (firma digitale)</td>
+            <td class="col-fh"><span class="check-y">✓ puro JS</span></td>
+            <td class="col-ai"><span class="check-y">✓</span></td>
+          </tr>
+          <tr>
+            <td class="col-feature">Foglio di stile ufficiale AdE (ministeriale)</td>
+            <td class="col-fh"><span class="check-y">✓ XSLT</span></td>
+            <td class="col-ai"><span class="check-y">✓</span></td>
+          </tr>
+          <tr>
+            <td class="col-feature">Dashboard statistiche e totali per anno</td>
+            <td class="col-fh"><span class="check-y">✓</span></td>
+            <td class="col-ai"><span class="check-p">Parziale</span></td>
+          </tr>
+          <tr>
+            <td class="col-feature">Docker / installazione su server / NAS</td>
+            <td class="col-fh"><span class="check-y">✓</span></td>
+            <td class="col-ai"><span class="check-n">✗</span></td>
+          </tr>
+          <tr>
+            <td class="col-feature">Dark mode</td>
+            <td class="col-fh"><span class="check-y">✓</span></td>
+            <td class="col-ai"><span class="check-n">✗</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="compare-note">FatturaHub non è affiliato con AssoSoftware. Confronto basato sulle versioni pubblicamente disponibili al momento della pubblicazione.</p>
     </div>
   </div>
 </section>
@@ -1105,6 +1258,43 @@
         </div>
       </details>
 
+      <details>
+        <summary>
+          Posso installarlo su un NAS, Raspberry Pi o server casalingo?
+          <span class="faq-plus">+</span>
+        </summary>
+        <div class="faq-body">
+          Sì. FatturaHub gira su qualsiasi dispositivo con <strong>Node.js 20+</strong> o <strong>Docker</strong> —
+          inclusi NAS Synology, QNAP, Raspberry Pi e mini-PC. Una volta avviato, è accessibile da tutti i
+          computer della rete domestica o aziendale tramite browser, senza installare niente sugli altri dispositivi.
+        </div>
+      </details>
+
+      <details>
+        <summary>
+          Come scarico le fatture passive dal portale SDI?
+          <span class="faq-plus">+</span>
+        </summary>
+        <div class="faq-body">
+          Accedi al <strong>cassetto fiscale</strong> su <em>fatture e corrispettivi</em> dell'Agenzia delle Entrate
+          (o al portale del tuo intermediario) e scarica le fatture ricevute come file XML o P7M.
+          Una volta scaricate, trascina l'intera cartella su FatturaHub per indicizzarle tutte in un colpo solo.
+        </div>
+      </details>
+
+      <details>
+        <summary>
+          FatturaHub gestisce le notifiche SDI (file NS, RC, MT)?
+          <span class="faq-plus">+</span>
+        </summary>
+        <div class="faq-body">
+          No — e intenzionalmente. FatturaHub riconosce e importa solo i file <strong>FatturaElettronica</strong>
+          veri e propri. I file di notifica SDI come <code>_RC_</code> (ricevuta di consegna),
+          <code>_NS_</code> (notifica di scarto) o <code>_MT_</code> vengono ignorati automaticamente,
+          senza creare record vuoti nel database.
+        </div>
+      </details>
+
     </div>
   </div>
 </section>
@@ -1123,6 +1313,12 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
         Visualizza su GitHub
       </a>
+    </div>
+    <div class="gh-badges">
+      <img src="https://img.shields.io/github/license/lenny76/FatturaHub?style=flat-square&color=1e40af&labelColor=0f172a" alt="Licenza MIT" loading="lazy">
+      <img src="https://img.shields.io/github/stars/lenny76/FatturaHub?style=flat-square&color=f59e0b&labelColor=0f172a" alt="GitHub Stars" loading="lazy">
+      <img src="https://img.shields.io/github/last-commit/lenny76/FatturaHub?style=flat-square&color=22d3ee&labelColor=0f172a" alt="Ultimo commit" loading="lazy">
+      <img src="https://img.shields.io/github/release/lenny76/FatturaHub?style=flat-square&color=16a34a&labelColor=0f172a&label=release" alt="Ultima release" loading="lazy">
     </div>
     <div class="tech-badges">
       <span class="tbadge">Node.js</span>
