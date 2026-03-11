@@ -5,6 +5,13 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.3.2] - 2026-03-11
+
+### Fix
+- **Ricerca + filtro fornitore**: selezionare un fornitore dalla sidebar mentre era attiva una ricerca testuale non cambiava i risultati — il filtro fornitore veniva ignorato dal motore FTS5. Ora i due filtri si combinano correttamente.
+
+---
+
 ## [1.3.1] - 2026-03-10
 
 ### Sicurezza

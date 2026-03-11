@@ -47,6 +47,7 @@ router.get('/', (req, res) => {
       }
     }
     if (docType) { conditions.push('document_type = ?'); params.push(docType); }
+    if (supplier) { conditions.push("supplier_name LIKE ?"); params.push(`%${supplier}%`); }
 
     const where = 'WHERE ' + conditions.join(' AND ');
     const total = db.prepare(`SELECT COUNT(*) as cnt FROM invoices ${where}`).get(params).cnt;
