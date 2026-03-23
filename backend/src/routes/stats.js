@@ -12,11 +12,21 @@ const router = express.Router();
  * Aggregati (count, imponibile, IVA, totale) con filtri opzionali
  */
 router.get('/analysis', (req, res) => {
-  const { years, months, docType } = req.query;
+  const { years, months, docType, q } = req.query;
   const db = getDb();
 
   const conditions = ["direction='passiva'"];
   const params = [];
+
+  // FTS5 text search — restrict to matching invoice IDs
+  if (q && q.trim()) {
+    const ftsQuery = `"${q.trim().replace(/"/g, '')}"*`;
+    const ftsRows = db.prepare(`SELECT invoice_id FROM invoice_fts WHERE invoice_fts MATCH ?`).all(ftsQuery);
+    const ids = ftsRows.map(r => r.invoice_id);
+    if (ids.length === 0) return res.json({ count: 0, sum_taxable: 0, sum_tax: 0, sum_total: 0 });
+    conditions.push(`id IN (${ids.map(() => '?').join(',')})`);
+    params.push(...ids);
+  }
 
   if (years) {
     const arr = years.split(',').map(y => parseInt(y)).filter(y => !isNaN(y));

@@ -5,6 +5,14 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.3.3] - 2026-03-23
+
+### Fix
+- **Barra riepilogo importi non aggiornata con la ricerca**: gli importi di Imponibile, IVA e Totale in fondo alla lista fatture non si aggiornavano quando si effettuava una ricerca testuale — restavano sempre sul totale generale. Ora la barra riflette correttamente i risultati della ricerca attiva.
+- **Formattazione importi senza separatore migliaia**: gli importi nella barra riepilogo (es. `3126,82 €`) non mostravano il punto delle migliaia. Ora vengono formattati correttamente (es. `3.126,82 €`).
+
+---
+
 ## [1.3.2] - 2026-03-11
 
 ### Fix

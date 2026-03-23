@@ -404,7 +404,7 @@ function sortInd(field) {
   return store.filters.order === 'ASC' ? '↑' : '↓';
 }
 
-const fmtEur = v => v == null ? '—' : new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v);
+const fmtEur = v => v == null ? '—' : new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', useGrouping: 'always' }).format(v);
 
 async function fetchAnalisi() {
   try {
@@ -413,6 +413,7 @@ async function fetchAnalisi() {
     if (store.filters.months) params.months = store.filters.months;
     if (store.filters.docType) params.docType = store.filters.docType;
     if (store.filters.supplier) params.supplier = store.filters.supplier;
+    if (store.filters.q) params.q = store.filters.q;
     const { data } = await api.get('/stats/analysis', { params });
     analisiData.value = data;
   } catch {
