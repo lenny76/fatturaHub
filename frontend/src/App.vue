@@ -25,7 +25,8 @@
             v-model="searchQ"
             @keyup.enter="doSearch"
             type="text"
-            placeholder="Cerca..."
+            placeholder="Fornitore, n° fattura, importo…"
+            title="Cerca per fornitore, P.IVA, numero fattura, descrizione righe o importo (es. 1.234,56)"
             class="bg-transparent text-gray-800 dark:text-white text-xs outline-none w-24 sm:w-36 md:w-44 placeholder-gray-400"
           />
           <button v-if="searchQ" @click="clearSearch" class="text-gray-400 hover:text-gray-600 dark:hover:text-white">
@@ -65,6 +66,13 @@
         <button @click="showLegend = true" class="toolbar-btn" title="Legenda codici (TD, MP, TP)">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10M4 18h7"/>
+          </svg>
+        </button>
+
+        <!-- Changelog -->
+        <button @click="showChangelog = true" class="toolbar-btn" title="Novità e aggiornamenti">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
           </svg>
         </button>
 
@@ -516,6 +524,49 @@
     </div>
   </div>
 
+  <!-- ── Changelog modal ── -->
+  <div v-if="showChangelog" class="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-6 pb-6 px-4" @click.self="showChangelog = false">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-xl flex flex-col max-h-full overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex-none">
+        <div>
+          <h2 class="text-sm font-semibold text-gray-800 dark:text-white">Novità e aggiornamenti</h2>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Cronologia delle versioni</p>
+        </div>
+        <button @click="showChangelog = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="overflow-y-auto px-5 py-4 space-y-5">
+        <div v-for="release in CHANGELOG" :key="release.version">
+          <div class="flex items-baseline gap-2 mb-2">
+            <span class="font-mono font-semibold text-sm text-gray-800 dark:text-white">v{{ release.version }}</span>
+            <span class="text-xs text-gray-400 dark:text-gray-500">{{ release.date }}</span>
+          </div>
+          <div v-for="group in release.entries" :key="group.type" class="mb-2">
+            <span
+              class="inline-block text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded mb-1"
+              :class="{
+                'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300': group.type === 'new',
+                'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300': group.type === 'improved',
+                'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300': group.type === 'fix',
+                'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300': group.type === 'security',
+              }"
+            >{{ group.type === 'new' ? 'Novità' : group.type === 'improved' ? 'Migliorato' : group.type === 'fix' ? 'Fix' : 'Sicurezza' }}</span>
+            <ul class="space-y-0.5">
+              <li v-for="item in group.items" :key="item" class="text-xs text-gray-600 dark:text-gray-400 flex gap-1.5">
+                <span class="text-gray-400 flex-none">•</span>
+                <span>{{ item }}</span>
+              </li>
+            </ul>
+          </div>
+          <div class="border-b border-gray-100 dark:border-gray-700 mt-3" />
+        </div>
+      </div>
+    </div>
+  </div>
+
 </template>
 
 <script setup>
@@ -524,11 +575,13 @@ import { useInvoicesStore } from '@/stores/invoices';
 import UploadModal from '@/components/UploadModal.vue';
 import api from '@/api';
 import { docTypeLabel, DOC_TYPES, PAYMENT_METHODS, PAYMENT_CONDITIONS } from '@/utils/docTypes';
+import { CHANGELOG } from '@/utils/changelog';
 
 const store = useInvoicesStore();
 const showUpload = ref(false);
 const showHelp = ref(false);
 const showLegend = ref(false);
+const showChangelog = ref(false);
 const showSettings = ref(false);
 const showYearSettings = ref(false);
 const showDeleteConfirm = ref(false);
@@ -635,6 +688,7 @@ function resetFilters() {
   searchQ.value = '';
   store.setFilter('docType', '');
   store.setFilter('q', '');
+  store.setFilter('amount', '');
   applyFilters(); // usa effectiveYears per rispettare gli anni nascosti
 }
 
@@ -678,14 +732,38 @@ async function onUploadClose() {
   applyFilters(); // ricalcola effectiveYears (nuovi anni sono visibili di default)
 }
 
+function parseAmountQuery(str) {
+  const s = str.trim().replace(/\s/g, '');
+  if (!/^[\d.,]+$/.test(s) || s === '') return null;
+  let normalized = s;
+  if (s.includes('.') && s.includes(',')) {
+    // Entrambi i separatori: l'ultimo è il decimale
+    normalized = s.lastIndexOf(',') > s.lastIndexOf('.')
+      ? s.replace(/\./g, '').replace(',', '.')
+      : s.replace(/,/g, '');
+  } else if (s.includes(',')) {
+    normalized = s.replace(',', '.');
+  }
+  const n = parseFloat(normalized);
+  return isNaN(n) ? null : n;
+}
+
 function doSearch() {
-  store.setFilter('q', searchQ.value);
+  const amount = parseAmountQuery(searchQ.value);
+  if (amount !== null) {
+    store.setFilter('q', '');
+    store.setFilter('amount', String(amount));
+  } else {
+    store.setFilter('amount', '');
+    store.setFilter('q', searchQ.value);
+  }
   store.fetchList();
 }
 
 function clearSearch() {
   searchQ.value = '';
   store.setFilter('q', '');
+  store.setFilter('amount', '');
   store.fetchList();
 }
 

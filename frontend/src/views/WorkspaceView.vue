@@ -58,7 +58,7 @@
 
     <!-- ── Pannello centrale: Lista fatture ── -->
     <div
-      class="flex-col overflow-hidden border-r border-gray-300 dark:border-gray-700 lg:flex lg:w-[560px] lg:flex-none"
+      class="flex-col overflow-hidden border-r border-gray-300 dark:border-gray-700 lg:flex lg:w-[740px] lg:flex-none"
       :class="selectedId ? 'hidden' : 'flex'"
     >
       <!-- Barra mobile: hamburger + filtro attivo -->
@@ -82,7 +82,8 @@
               <th class="col-th" @click="toggleSort('invoice_date')">Data {{ sortInd('invoice_date') }}</th>
               <th class="col-th hidden sm:table-cell">N.</th>
               <th class="col-th" @click="toggleSort('supplier_name')">Fornitore {{ sortInd('supplier_name') }}</th>
-              <th class="col-th text-right" @click="toggleSort('total_amount')">Importo {{ sortInd('total_amount') }}</th>
+              <th class="col-th text-right hidden sm:table-cell">Imponibile</th>
+              <th class="col-th text-right" @click="toggleSort('total_amount')">Totale {{ sortInd('total_amount') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -95,6 +96,7 @@
               <td class="col-td font-mono">{{ inv.invoice_date?.slice(0,10) }}</td>
               <td class="col-td font-mono hidden sm:table-cell" :class="selectedId === inv.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'">{{ inv.invoice_number }}</td>
               <td class="col-td truncate max-w-[100px] sm:max-w-[160px]">{{ inv.supplier_name }}</td>
+              <td class="col-td font-medium tabular-nums text-right hidden sm:table-cell" :class="selectedId === inv.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'">{{ formatCurrency(inv.taxable_amount) }}</td>
               <td class="col-td font-medium tabular-nums">
                 <div class="flex items-center justify-end">
                   {{ formatCurrency(inv.total_amount) }}
@@ -110,7 +112,7 @@
               </td>
             </tr>
             <tr v-if="!store.list.length">
-              <td colspan="4" class="col-td text-center text-gray-400 dark:text-gray-500 italic py-8">Nessuna fattura</td>
+              <td colspan="5" class="col-td text-center text-gray-400 dark:text-gray-500 italic py-8">Nessuna fattura</td>
             </tr>
           </tbody>
         </table>
