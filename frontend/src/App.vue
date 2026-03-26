@@ -61,6 +61,13 @@
           </svg>
         </button>
 
+        <!-- Legenda codici -->
+        <button @click="showLegend = true" class="toolbar-btn" title="Legenda codici (TD, MP, TP)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10M4 18h7"/>
+          </svg>
+        </button>
+
         <!-- Guida -->
         <button @click="showHelp = true" class="toolbar-btn" title="Guida e funzionalità">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,7 +183,7 @@
             title="Filtra per tipo documento"
           >
             <option value="">Tipo: tutti</option>
-            <option v-for="dt in store.docTypes" :key="dt" :value="dt">{{ dt }}</option>
+            <option v-for="dt in store.docTypes" :key="dt" :value="dt">{{ docTypeLabel(dt) }}</option>
           </select>
         </template>
 
@@ -450,6 +457,65 @@
       </div>
     </div>
   </div>
+
+  <!-- ── Legenda codici modal ── -->
+  <div v-if="showLegend" class="fixed inset-0 bg-black/50 z-50 flex items-start justify-center pt-6 pb-6 px-4" @click.self="showLegend = false">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-5xl flex flex-col max-h-full overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex-none">
+        <h2 class="text-sm font-semibold text-gray-800 dark:text-white">Legenda codici FatturaPA</h2>
+        <button @click="showLegend = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="overflow-y-auto px-5 py-4 text-gray-700 dark:text-gray-300">
+        <div class="grid grid-cols-3 gap-6">
+
+          <!-- TD -->
+          <div>
+            <h3 class="font-semibold text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Tipo documento (TD)</h3>
+            <table class="w-full text-xs border-collapse">
+              <tbody>
+                <tr v-for="(desc, code) in DOC_TYPES" :key="code" class="border-b border-gray-100 dark:border-gray-700">
+                  <td class="py-1 pr-3 font-mono font-medium text-gray-500 dark:text-gray-400 w-12 whitespace-nowrap">{{ code }}</td>
+                  <td class="py-1">{{ desc }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- MP -->
+          <div>
+            <h3 class="font-semibold text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Modalità pagamento (MP)</h3>
+            <table class="w-full text-xs border-collapse">
+              <tbody>
+                <tr v-for="(desc, code) in PAYMENT_METHODS" :key="code" class="border-b border-gray-100 dark:border-gray-700">
+                  <td class="py-1 pr-3 font-mono font-medium text-gray-500 dark:text-gray-400 w-12 whitespace-nowrap">{{ code }}</td>
+                  <td class="py-1">{{ desc }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- TP -->
+          <div>
+            <h3 class="font-semibold text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Condizioni pagamento (TP)</h3>
+            <table class="w-full text-xs border-collapse">
+              <tbody>
+                <tr v-for="(desc, code) in PAYMENT_CONDITIONS" :key="code" class="border-b border-gray-100 dark:border-gray-700">
+                  <td class="py-1 pr-3 font-mono font-medium text-gray-500 dark:text-gray-400 w-12 whitespace-nowrap">{{ code }}</td>
+                  <td class="py-1">{{ desc }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
 </template>
 
 <script setup>
@@ -457,10 +523,12 @@ import { ref, computed, onMounted } from 'vue';
 import { useInvoicesStore } from '@/stores/invoices';
 import UploadModal from '@/components/UploadModal.vue';
 import api from '@/api';
+import { docTypeLabel, DOC_TYPES, PAYMENT_METHODS, PAYMENT_CONDITIONS } from '@/utils/docTypes';
 
 const store = useInvoicesStore();
 const showUpload = ref(false);
 const showHelp = ref(false);
+const showLegend = ref(false);
 const showSettings = ref(false);
 const showYearSettings = ref(false);
 const showDeleteConfirm = ref(false);
