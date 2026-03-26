@@ -17,6 +17,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     supplier: '',
     buyer: '',
     q: '',
+    amount: '',
     page: 1,
     limit: 50,
     sort: 'invoice_date',
@@ -31,7 +32,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
     try {
       const params = { ...filters.value };
       // Use search endpoint when text query or supplier/buyer filter is set
-      const useSearch = params.q || params.supplier || params.buyer;
+      const useSearch = params.q || params.amount || params.supplier || params.buyer;
       const endpoint = useSearch ? '/search' : '/invoices';
       const { data } = await api.get(endpoint, { params });
       list.value = data.data;
@@ -65,7 +66,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
   }
 
   function resetFilters() {
-    filters.value = { direction: 'passiva', years: '', months: '', docType: '', supplier: '', buyer: '', q: '', page: 1, limit: 50, sort: 'invoice_date', order: 'ASC' };
+    filters.value = { direction: 'passiva', years: '', months: '', docType: '', supplier: '', buyer: '', q: '', amount: '', page: 1, limit: 50, sort: 'invoice_date', order: 'ASC' };
   }
 
   return { list, total, loading, filters, stats, years, docTypes, fetchList, fetchStats, fetchParties, deleteInvoice, setFilter, resetFilters };

@@ -8,7 +8,7 @@ const router = express.Router();
  * Query params: q (full-text), direction, years, months, docType, supplier, buyer
  */
 router.get('/', (req, res) => {
-  const { q, direction, years, months, docType, supplier, buyer, page = 1, limit = 50, sort = 'invoice_date', order = 'DESC' } = req.query;
+  const { q, amount, direction, years, months, docType, supplier, buyer, page = 1, limit = 50, sort = 'invoice_date', order = 'DESC' } = req.query;
 
   const validSorts = ['invoice_date', 'supplier_name', 'buyer_name', 'total_amount', 'invoice_number', 'imported_at'];
   const safeSort = validSorts.includes(sort) ? sort : 'invoice_date';
@@ -48,6 +48,11 @@ router.get('/', (req, res) => {
     }
     if (docType) { conditions.push('document_type = ?'); params.push(docType); }
     if (supplier) { conditions.push("supplier_name LIKE ?"); params.push(`%${supplier}%`); }
+    const amountVal = amount ? parseFloat(amount) : NaN;
+    if (!isNaN(amountVal)) {
+      conditions.push('(ABS(COALESCE(total_amount, -1) - ?) < 0.005 OR ABS(COALESCE(taxable_amount, -1) - ?) < 0.005)');
+      params.push(amountVal, amountVal);
+    }
 
     const where = 'WHERE ' + conditions.join(' AND ');
     const total = db.prepare(`SELECT COUNT(*) as cnt FROM invoices ${where}`).get(params).cnt;
@@ -84,6 +89,11 @@ router.get('/', (req, res) => {
   }
   if (docType) { conditions.push('document_type = ?'); params.push(docType); }
   if (supplier) { conditions.push("supplier_name LIKE ?"); params.push(`%${supplier}%`); }
+  const amountVal = amount ? parseFloat(amount) : NaN;
+  if (!isNaN(amountVal)) {
+    conditions.push('(ABS(COALESCE(total_amount, -1) - ?) < 0.005 OR ABS(COALESCE(taxable_amount, -1) - ?) < 0.005)');
+    params.push(amountVal, amountVal);
+  }
 
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
   const total = db.prepare(`SELECT COUNT(*) as cnt FROM invoices ${where}`).get(params).cnt;

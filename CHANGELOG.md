@@ -5,6 +5,32 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.4.1] - 2026-03-26
+
+### Aggiunto
+- **Changelog in-app**: nuovo pulsante nella toolbar che apre un modale con la cronologia completa di tutte le versioni, con badge colorati per tipo di modifica.
+- **Ricerca per importo**: digitando un valore numerico nella barra di ricerca (es. `1.234,56`) l'app filtra automaticamente su totale e imponibile. Supporta formato italiano e internazionale.
+- **Colonna Imponibile**: la lista fatture mostra ora una colonna Imponibile accanto al Totale (visibile da desktop).
+
+### Migliorato
+- **Barra di ricerca**: placeholder e tooltip aggiornati per indicare tutti i criteri supportati (fornitore, n° fattura, importo).
+
+---
+
+## [1.4.0] - 2026-03-26
+
+### Aggiunto
+- **Legenda codici FatturaPA**: nuovo pulsante nella toolbar che apre un modale con la descrizione completa di tutti i codici TD (tipo documento), MP (modalità pagamento) e TP (condizioni pagamento), in tre colonne affiancate.
+- **Ricerca per importo**: digitando un valore numerico nella barra di ricerca (es. `1.234,56`) l'app cerca automaticamente tra gli importi totale, imponibile e IVA di tutte le fatture. Supporta sia il formato italiano (`1.234,56`) che internazionale (`1234.56`).
+- **Changelog in-app**: nuovo pulsante nella toolbar che mostra la cronologia degli aggiornamenti direttamente nell'app.
+
+### Migliorato
+- **Filtro tipo documento**: il menu a tendina mostra ora la descrizione del codice (es. `TD01 – Fattura`) invece del solo codice.
+- **Sezione pagamenti** (modalità completa): tabella arricchita con colonna Condizioni (TP), colonna Modalità con descrizione (MP), colonna Pagamento (CodicePagamento) e riga Beneficiario.
+- **Barra di ricerca**: placeholder e tooltip aggiornati per indicare tutti i criteri supportati.
+
+---
+
 ## [1.3.3] - 2026-03-23
 
 ### Fix
