@@ -5,6 +5,13 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.4.3] - 2026-03-27
+
+### Fix
+- **Estrazione XML da p7m con chunk DER**: i file `.p7m` firmati con OCTET STRING "costruito" (XML suddiviso in blocchi da 1000 byte) venivano estratti con byte spuri nel mezzo dei tag XML, causando il rifiuto in fase di parsing. Il nuovo algoritmo (`reassembleDerOctetChunks`) riassembla correttamente i chunk DER prima di decodificare l'XML.
+
+---
+
 ## [1.4.2] - 2026-03-27
 
 ### Aggiunto

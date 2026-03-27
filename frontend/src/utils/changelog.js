@@ -1,5 +1,17 @@
 export const CHANGELOG = [
   {
+    version: '1.4.3',
+    date: '2026-03-27',
+    entries: [
+      {
+        type: 'fix',
+        items: [
+          'File p7m con chunk DER: corretta estrazione XML da firme con OCTET STRING segmentato (blocchi da 1000 byte)',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.4.2',
     date: '2026-03-27',
     entries: [

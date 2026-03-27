@@ -57,12 +57,98 @@ function decodeBuffer(buffer, startOffset, length) {
 }
 
 /**
+ * Parse a DER length field at buf[offset].
+ * Returns { length, headerBytes } or null on error.
+ */
+function parseDerLength(buf, offset) {
+  if (offset >= buf.length) return null;
+  const first = buf[offset];
+  if (first < 0x80) return { length: first, headerBytes: 1 };
+  if (first === 0x80) return null; // indefinite not valid for primitives
+  const numBytes = first & 0x7F;
+  if (offset + numBytes >= buf.length) return null;
+  let length = 0;
+  for (let i = 0; i < numBytes; i++) length = length * 256 + buf[offset + 1 + i];
+  return { length, headerBytes: 1 + numBytes };
+}
+
+/**
+ * Starting at buf[firstChunkOffset] (a DER primitive OCTET STRING tag 0x04),
+ * reassemble all consecutive primitive OCTET STRING chunks into a single Buffer.
+ * This handles CAdES p7m files that split the XML payload across multiple chunks.
+ */
+function reassembleDerOctetChunks(buf, firstChunkOffset) {
+  const parts = [];
+  let pos = firstChunkOffset;
+  while (pos + 2 < buf.length) {
+    if (buf[pos] !== 0x04) break;
+    const parsed = parseDerLength(buf, pos + 1);
+    if (!parsed) break;
+    const dataStart = pos + 1 + parsed.headerBytes;
+    const dataEnd = dataStart + parsed.length;
+    if (dataEnd > buf.length) break;
+    parts.push(buf.slice(dataStart, dataEnd));
+    pos = dataEnd;
+    // Stop on end-of-contents (0x00 0x00)
+    if (buf[pos] === 0x00 && buf[pos + 1] === 0x00) break;
+  }
+  return parts.length > 0 ? Buffer.concat(parts) : null;
+}
+
+/**
+ * Find the end of the FatturaElettronica XML in buf starting from startOffset.
+ * Returns the offset just past the closing tag, or -1 if not found.
+ */
+function findXmlEnd(buf, startOffset) {
+  const closeTagPatterns = [
+    Buffer.from('</FatturaElettronica>'),
+    Buffer.from('</p:FatturaElettronica>'),
+    Buffer.from('</ns3:FatturaElettronica>'),
+  ];
+
+  for (const pattern of closeTagPatterns) {
+    for (let i = startOffset; i < buf.length - pattern.length; i++) {
+      let found = true;
+      for (let j = 0; j < pattern.length; j++) {
+        if (buf[i + j] !== pattern[j]) { found = false; break; }
+      }
+      if (found) {
+        console.log('[p7mExtractor] Found close tag at byte offset:', i + pattern.length, 'pattern:', pattern.toString());
+        return i + pattern.length;
+      }
+    }
+  }
+
+  // Generic: </ [optional prefix:] FatturaElettronica>
+  const genericClose = Buffer.from('FatturaElettronica>');
+  for (let i = startOffset; i < buf.length - genericClose.length - 3; i++) {
+    if (buf[i] !== 0x3c || buf[i + 1] !== 0x2f) continue;
+    let pos = i + 2;
+    while (pos < i + 22 && (buf[pos] === 0x3a || (buf[pos] >= 0x41 && buf[pos] <= 0x5A) || (buf[pos] >= 0x61 && buf[pos] <= 0x7A) || (buf[pos] >= 0x30 && buf[pos] <= 0x39))) pos++;
+    let match = true;
+    for (let j = 0; j < genericClose.length; j++) {
+      if (buf[pos + j] !== genericClose[j]) { match = false; break; }
+    }
+    if (match) {
+      console.log('[p7mExtractor] Found generic close tag at byte offset:', pos + genericClose.length);
+      return pos + genericClose.length;
+    }
+  }
+
+  return -1;
+}
+
+/**
  * Extract XML from a CAdES-BES p7m buffer by searching for the XML content
  * directly in the DER binary. Works without OpenSSL.
  *
  * In a FatturaPA p7m the XML payload is stored uncompressed and unencrypted
  * inside the CMS EncapsulatedContentInfo.eContent OCTET STRING, so we can
  * reliably find it by scanning for the XML start/end markers.
+ *
+ * When the payload is split across multiple DER primitive OCTET STRING chunks
+ * (chunk size typically 1000 bytes), the chunks are reassembled before decoding
+ * to prevent DER header bytes from corrupting the XML content.
  *
  * @param {Buffer} buffer
  * @returns {string} XML string
@@ -109,69 +195,42 @@ function extractXmlFromBuffer(buffer) {
     throw new Error('Contenuto XML non trovato nel file .p7m');
   }
 
-  // Find end of XML content using raw bytes (search for closing tag pattern)
-  // Need to search in raw bytes to handle different encodings
-  const closeTagPatterns = [
-    Buffer.from('</FatturaElettronica>'),
-    Buffer.from('</p:FatturaElettronica>'),
-    Buffer.from('</ns3:FatturaElettronica>'),
-  ];
-  
-  let endIdx = -1;
-  for (const pattern of closeTagPatterns) {
-    // Search from xmlStart onwards
-    for (let i = xmlStart; i < buffer.length - pattern.length; i++) {
-      let found = true;
-      for (let j = 0; j < pattern.length; j++) {
-        if (buffer[i + j] !== pattern[j]) {
-          found = false;
-          break;
-        }
+  // Try to reassemble DER OCTET STRING chunks to avoid chunk-header bytes
+  // corrupting the XML. Walk back from xmlStart to find the 04 tag of the
+  // first chunk (chunk header ends exactly where XML data starts).
+  let workBuffer = null;
+  for (let back = 1; back <= 12; back++) {
+    const pos = xmlStart - back;
+    if (pos < 0) break;
+    if (buffer[pos] !== 0x04) continue;
+    const parsed = parseDerLength(buffer, pos + 1);
+    if (!parsed) continue;
+    const dataStart = pos + 1 + parsed.headerBytes;
+    const offset = xmlStart - dataStart;
+    if (offset >= 0 && offset <= 4) {
+      // This 04 header leads to our XML data start (offset accounts for BOM or whitespace).
+      const reassembled = reassembleDerOctetChunks(buffer, pos);
+      if (reassembled) {
+        workBuffer = reassembled;
+        console.log('[p7mExtractor] Reassembled', reassembled.length, 'bytes from DER OCTET STRING chunks');
       }
-      if (found) {
-        endIdx = i + pattern.length;
-        console.log('[p7mExtractor] Found close tag at byte offset:', endIdx, 'pattern:', pattern.toString());
-        break;
-      }
-    }
-    if (endIdx !== -1) break;
-  }
-  
-  // Try generic pattern with any namespace prefix
-  if (endIdx === -1) {
-    const genericClose = Buffer.from('FatturaElettronica>');
-    for (let i = xmlStart; i < buffer.length - genericClose.length - 3; i++) {
-      // Look for </ followed by optional prefix and FatturaElettronica>
-      if (buffer[i] === 0x3c /* < */ && buffer[i + 1] === 0x2f /* / */) {
-        // Skip </ and any prefix characters (letters, numbers, :), then check for FatturaElettronica>
-        let pos = i + 2;
-        while (pos < i + 2 + 20 && (buffer[pos] === 0x3a /* : */ || (buffer[pos] >= 0x41 && buffer[pos] <= 0x5A) || (buffer[pos] >= 0x61 && buffer[pos] <= 0x7A) || (buffer[pos] >= 0x30 && buffer[pos] <= 0x39))) {
-          pos++;
-        }
-        let match = true;
-        for (let j = 0; j < genericClose.length; j++) {
-          if (buffer[pos + j] !== genericClose[j]) {
-            match = false;
-            break;
-          }
-        }
-        if (match) {
-          endIdx = pos + genericClose.length;
-          console.log('[p7mExtractor] Found generic close tag at byte offset:', endIdx);
-          break;
-        }
-      }
+      break;
     }
   }
 
-  if (endIdx === -1) {
-    throw new Error('Tag di chiusura XML non trovato nel file .p7m');
+  // Fall back to raw slice if reassembly was not possible
+  if (!workBuffer) {
+    const endIdx = findXmlEnd(buffer, xmlStart);
+    if (endIdx === -1) throw new Error('Tag di chiusura XML non trovato nel file .p7m');
+    workBuffer = buffer.slice(xmlStart, endIdx);
   }
 
-  const xmlLength = endIdx - xmlStart;
-  
+  // Find end of XML in the work buffer (reassembled buffer may have trailing data)
+  let endInWork = findXmlEnd(workBuffer, 0);
+  if (endInWork === -1) endInWork = workBuffer.length;
+
   // Decode with proper encoding detection
-  const xmlRaw = decodeBuffer(buffer, xmlStart, xmlLength);
+  const xmlRaw = decodeBuffer(workBuffer, 0, endInWork);
   
   console.log('[p7mExtractor] Extracted XML start:', xmlRaw.substring(0, 100));
   
