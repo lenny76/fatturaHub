@@ -5,6 +5,17 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.4.2] - 2026-03-27
+
+### Aggiunto
+- **Visualizzazione DDT**: i Documenti di Trasporto (DatiDDT) vengono ora mostrati inline nella tabella righe, come riga separatrice azzurra prima del gruppo di articoli collegati. Supporta più DDT per fattura, con o senza RiferimentoNumeroLinea.
+
+### Migliorato
+- **Guida in-app**: il modale guida è stato aggiornato con le sezioni Legenda codici, Changelog e la nota sulla ricerca per importo.
+- **Ricerca per importo**: un numero intero (es. `123`) viene ora cercato come testo (numero fattura, fornitore) invece di essere interpretato come importo — serve il separatore decimale (es. `123,45`) per la ricerca su importi.
+
+---
+
 ## [1.4.1] - 2026-03-26
 
 ### Aggiunto

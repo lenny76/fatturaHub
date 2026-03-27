@@ -26,7 +26,7 @@
             @keyup.enter="doSearch"
             type="text"
             placeholder="Fornitore, n° fattura, importo…"
-            title="Cerca per fornitore, P.IVA, numero fattura, descrizione righe o importo (es. 1.234,56)"
+            title="Cerca per fornitore, P.IVA, numero fattura, descrizione righe. Per importo usa il separatore decimale (es. 1.234,56)"
             class="bg-transparent text-gray-800 dark:text-white text-xs outline-none w-24 sm:w-36 md:w-44 placeholder-gray-400"
           />
           <button v-if="searchQ" @click="clearSearch" class="text-gray-400 hover:text-gray-600 dark:hover:text-white">
@@ -759,7 +759,9 @@ async function onUploadClose() {
 
 function parseAmountQuery(str) {
   const s = str.trim().replace(/\s/g, '');
+  // Richiede almeno un separatore decimale: "123" → ricerca testuale (n° fattura), "123,45" → importo
   if (!/^[\d.,]+$/.test(s) || s === '') return null;
+  if (!s.includes(',') && !s.includes('.')) return null;
   let normalized = s;
   if (s.includes('.') && s.includes(',')) {
     // Entrambi i separatori: l'ultimo è il decimale

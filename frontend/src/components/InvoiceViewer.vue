@@ -256,15 +256,43 @@ function buildHtml(xmlString, full, forPdf = false) {
   const buyerName = getText(cessionario, 'Denominazione') ||
     `${getText(cessionario, 'Nome')} ${getText(cessionario, 'Cognome')}`.trim();
 
-  // Line items
-  const linesHtml = getAllElements(body, 'DettaglioLinee').map(l => `
-    <tr>
-      <td class="r">${getText(l, 'NumeroLinea')}</td>
+  // DDT: build map firstLine → ddtInfo for inline rendering
+  const ddtBlocks = getAllElements(datiGen, 'DatiDDT').map(d => ({
+    numero: getText(d, 'NumeroDDT'),
+    data: getText(d, 'DataDDT'),
+    righe: new Set(getAllElements(d, 'RiferimentoNumeroLinea').map(n => n.textContent.trim())),
+  }));
+  const ddtByFirstLine = new Map(); // firstLineNum (string) → ddtInfo
+  const ddtGlobal = [];             // DDT senza RiferimentoNumeroLinea → tutta la fattura
+  for (const ddt of ddtBlocks) {
+    if (ddt.righe.size === 0) {
+      ddtGlobal.push(ddt);
+    } else {
+      const firstLine = String([...ddt.righe].map(Number).sort((a, b) => a - b)[0]);
+      ddtByFirstLine.set(firstLine, ddt);
+    }
+  }
+  const numCols = full ? 7 : 4;
+
+  // Line items (with inline DDT separator rows)
+  const globalDdtRows = ddtGlobal.map(d =>
+    `<tr class="ddt-row"><td colspan="${numCols}">📦 DDT n° <strong>${d.numero}</strong> &nbsp;del&nbsp; ${d.data}</td></tr>`
+  ).join('');
+
+  const linesHtml = globalDdtRows + getAllElements(body, 'DettaglioLinee').map(l => {
+    const lineNum = getText(l, 'NumeroLinea');
+    const ddt = ddtByFirstLine.get(lineNum);
+    const ddtRow = ddt
+      ? `<tr class="ddt-row"><td colspan="${numCols}">📦 DDT n° <strong>${ddt.numero}</strong> &nbsp;del&nbsp; ${ddt.data}</td></tr>`
+      : '';
+    return `${ddtRow}<tr>
+      <td class="r">${lineNum}</td>
       <td>${getText(l, 'Descrizione')}</td>
       ${full ? `<td class="r">${getText(l, 'Quantita')}</td><td>${getText(l, 'UnitaMisura')}</td><td class="r">${getText(l, 'PrezzoUnitario')}</td>` : ''}
       <td class="r fw">${getText(l, 'PrezzoTotale')}</td>
       <td class="r">${getText(l, 'AliquotaIVA')}%</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   // VAT summary
   const riepilogoHtml = getAllElements(body, 'DatiRiepilogo').map(r => `
@@ -299,12 +327,14 @@ function buildHtml(xmlString, full, forPdf = false) {
     .r{text-align:right}.fw{font-weight:600}
     .sec{font-size:10px;font-weight:700;color:${forPdf ? '#222' : '#555'};margin:10px 0 3px;text-transform:uppercase;border-bottom:1px solid #ddd;padding-bottom:2px}
     .lbl{color:${forPdf ? '#444' : '#888'};font-size:10px}
+    .ddt-row td{background:#eff6ff;color:#1d4ed8;font-size:10px;font-style:italic;border-color:#bfdbfe}
     ${forPdf ? '' : `:root.dark .inv{color:#e5e7eb}
     :root.dark .t th{background:#374151;border-color:#4b5563;color:#d1d5db}
     :root.dark .t td{border-color:#374151}
     :root.dark .t tr{border-color:#374151}
     :root.dark .sec{color:#9ca3af;border-color:#374151}
-    :root.dark .lbl{color:#6b7280}`}
+    :root.dark .lbl{color:#6b7280}
+    :root.dark .ddt-row td{background:#1e3a5f;color:#93c5fd;border-color:#1e40af}`}
   </style>
   <div class="inv">
     <table class="t">

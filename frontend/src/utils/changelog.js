@@ -1,5 +1,24 @@
 export const CHANGELOG = [
   {
+    version: '1.4.2',
+    date: '2026-03-27',
+    entries: [
+      {
+        type: 'new',
+        items: [
+          'Visualizzazione DDT inline nella tabella righe: riga separatrice azzurra prima degli articoli collegati',
+        ],
+      },
+      {
+        type: 'improved',
+        items: [
+          'Guida in-app aggiornata con sezioni Legenda, Changelog e ricerca per importo',
+          'Ricerca per importo: interi puri (es. 123) cercano come testo, servono i decimali per gli importi',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.4.1',
     date: '2026-03-26',
     entries: [
