@@ -36,7 +36,7 @@ const apiLimiter = rateLimit({
 
 const uploadLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 60,
+  max: 200,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Troppi upload, riprova tra un minuto.' },
