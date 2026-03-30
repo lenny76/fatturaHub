@@ -1,5 +1,23 @@
 export const CHANGELOG = [
   {
+    version: '1.5.0',
+    date: '2026-03-30',
+    entries: [
+      {
+        type: 'new',
+        items: [
+          'AltriDatiGestionali nelle righe fattura: TARGA, KM e altri dati gestionali visibili sotto la descrizione',
+        ],
+      },
+      {
+        type: 'improved',
+        items: [
+          'Rate limit upload alzato da 60 a 200 req/min per importazioni massive',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.4.3',
     date: '2026-03-27',
     entries: [

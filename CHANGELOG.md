@@ -5,6 +5,16 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.5.0] - 2026-03-30
+
+### Aggiunto
+- **AltriDatiGestionali nelle righe fattura**: le viste semplificata e completa mostrano ora i dati gestionali aggiuntivi (es. TARGA, KM) sotto la descrizione di ogni riga, uno per riga, con badge su sfondo neutro. Supporta TipoDato, RiferimentoTesto, RiferimentoNumero e RiferimentoData.
+
+### Migliorato
+- **Rate limit upload**: il limite di richieste per l'endpoint di upload è stato alzato da 60 a 200 richieste/minuto, evitando blocchi durante l'importazione massiva di fatture.
+
+---
+
 ## [1.4.3] - 2026-03-27
 
 ### Fix

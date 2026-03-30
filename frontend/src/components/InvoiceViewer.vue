@@ -285,9 +285,22 @@ function buildHtml(xmlString, full, forPdf = false) {
     const ddtRow = ddt
       ? `<tr class="ddt-row"><td colspan="${numCols}">📦 DDT n° <strong>${ddt.numero}</strong> &nbsp;del&nbsp; ${ddt.data}</td></tr>`
       : '';
+    // AltriDatiGestionali (e.g. TARGA, KM, ...)
+    const altriDati = getAllElements(l, 'AltriDatiGestionali').map(a => {
+      const tipo = getText(a, 'TipoDato');
+      const testo = getText(a, 'RiferimentoTesto');
+      const numero = getText(a, 'RiferimentoNumero');
+      const data = getText(a, 'RiferimentoData');
+      const val = [testo, numero, data].filter(Boolean).join(' ');
+      return `<span class="altri-dati">${tipo}: ${val}</span>`;
+    });
+    const altriDatiHtml = altriDati.length
+      ? `<div class="altri-dati-row">${altriDati.join('<br>')}</div>`
+      : '';
+
     return `${ddtRow}<tr>
       <td class="r">${lineNum}</td>
-      <td>${getText(l, 'Descrizione')}</td>
+      <td>${getText(l, 'Descrizione')}${altriDatiHtml}</td>
       ${full ? `<td class="r">${getText(l, 'Quantita')}</td><td>${getText(l, 'UnitaMisura')}</td><td class="r">${getText(l, 'PrezzoUnitario')}</td>` : ''}
       <td class="r fw">${getText(l, 'PrezzoTotale')}</td>
       <td class="r">${getText(l, 'AliquotaIVA')}%</td>
@@ -328,13 +341,16 @@ function buildHtml(xmlString, full, forPdf = false) {
     .sec{font-size:10px;font-weight:700;color:${forPdf ? '#222' : '#555'};margin:10px 0 3px;text-transform:uppercase;border-bottom:1px solid #ddd;padding-bottom:2px}
     .lbl{color:${forPdf ? '#444' : '#888'};font-size:10px}
     .ddt-row td{background:#eff6ff;color:#1d4ed8;font-size:10px;font-style:italic;border-color:#bfdbfe}
+    .altri-dati-row{margin-top:2px;font-size:10px}
+    .altri-dati{background:#f3f4f6;padding:1px 4px;border-radius:3px;white-space:nowrap}
     ${forPdf ? '' : `:root.dark .inv{color:#e5e7eb}
     :root.dark .t th{background:#374151;border-color:#4b5563;color:#d1d5db}
     :root.dark .t td{border-color:#374151}
     :root.dark .t tr{border-color:#374151}
     :root.dark .sec{color:#9ca3af;border-color:#374151}
     :root.dark .lbl{color:#6b7280}
-    :root.dark .ddt-row td{background:#1e3a5f;color:#93c5fd;border-color:#1e40af}`}
+    :root.dark .ddt-row td{background:#1e3a5f;color:#93c5fd;border-color:#1e40af}
+    :root.dark .altri-dati{background:#374151}`}
   </style>
   <div class="inv">
     <table class="t">
