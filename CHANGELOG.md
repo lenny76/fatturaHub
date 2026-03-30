@@ -5,6 +5,13 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.5.1] - 2026-03-30
+
+### Migliorato
+- **DDT deduplicati**: quando più righe consecutive appartengono allo stesso DDT, il banner viene mostrato solo una volta all'inizio del gruppo, invece di ripetersi su ogni riga.
+
+---
+
 ## [1.5.0] - 2026-03-30
 
 ### Aggiunto

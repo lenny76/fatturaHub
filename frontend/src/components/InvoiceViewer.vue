@@ -262,14 +262,15 @@ function buildHtml(xmlString, full, forPdf = false) {
     data: getText(d, 'DataDDT'),
     righe: new Set(getAllElements(d, 'RiferimentoNumeroLinea').map(n => n.textContent.trim())),
   }));
-  const ddtByFirstLine = new Map(); // firstLineNum (string) → ddtInfo
+  const ddtByLine = new Map();      // lineNum (string) → ddtInfo
   const ddtGlobal = [];             // DDT senza RiferimentoNumeroLinea → tutta la fattura
   for (const ddt of ddtBlocks) {
     if (ddt.righe.size === 0) {
       ddtGlobal.push(ddt);
     } else {
-      const firstLine = String([...ddt.righe].map(Number).sort((a, b) => a - b)[0]);
-      ddtByFirstLine.set(firstLine, ddt);
+      for (const r of ddt.righe) {
+        ddtByLine.set(String(r), ddt);
+      }
     }
   }
   const numCols = full ? 7 : 4;
@@ -279,12 +280,15 @@ function buildHtml(xmlString, full, forPdf = false) {
     `<tr class="ddt-row"><td colspan="${numCols}">📦 DDT n° <strong>${d.numero}</strong> &nbsp;del&nbsp; ${d.data}</td></tr>`
   ).join('');
 
+  let lastDdtKey = null;
   const linesHtml = globalDdtRows + getAllElements(body, 'DettaglioLinee').map(l => {
     const lineNum = getText(l, 'NumeroLinea');
-    const ddt = ddtByFirstLine.get(lineNum);
-    const ddtRow = ddt
+    const ddt = ddtByLine.get(lineNum);
+    const ddtKey = ddt ? `${ddt.numero}|${ddt.data}` : null;
+    const ddtRow = (ddt && ddtKey !== lastDdtKey)
       ? `<tr class="ddt-row"><td colspan="${numCols}">📦 DDT n° <strong>${ddt.numero}</strong> &nbsp;del&nbsp; ${ddt.data}</td></tr>`
       : '';
+    if (ddtKey) lastDdtKey = ddtKey;
     // AltriDatiGestionali (e.g. TARGA, KM, ...)
     const altriDati = getAllElements(l, 'AltriDatiGestionali').map(a => {
       const tipo = getText(a, 'TipoDato');

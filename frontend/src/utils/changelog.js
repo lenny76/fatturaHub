@@ -1,5 +1,17 @@
 export const CHANGELOG = [
   {
+    version: '1.5.1',
+    date: '2026-03-30',
+    entries: [
+      {
+        type: 'improved',
+        items: [
+          'DDT deduplicati: il banner appare solo una volta per gruppo, non ripetuto su ogni riga',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.5.0',
     date: '2026-03-30',
     entries: [
