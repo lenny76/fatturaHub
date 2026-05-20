@@ -1,5 +1,17 @@
 export const CHANGELOG = [
   {
+    version: '1.6.1',
+    date: '2026-05-20',
+    entries: [
+      {
+        type: 'fix',
+        items: [
+          'Modalità Ministeriale ora funziona anche in Docker (percorso XSL corretto in produzione)',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.6.0',
     date: '2026-05-20',
     entries: [

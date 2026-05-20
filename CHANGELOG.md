@@ -5,6 +5,13 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.6.1] - 2026-05-20
+
+### Fix
+- **Modalità Ministeriale 404 in Docker**: in produzione il percorso di ricerca dei fogli di stile XSL puntava fuori dal filesystem del container (i `../../../` salivano da `/app/src/services` arrivando a `/frontend/public/xslt`, inesistente), per cui ogni fattura aperta in modalità Ministeriale restituiva 404 "Foglio XSLT non trovato". Aggiunto un terzo percorso di ricerca `backend/public/xslt/` che corrisponde alla struttura dell'immagine Docker, dove gli XSL vengono copiati dal build del frontend.
+
+---
+
 ## [1.6.0] - 2026-05-20
 
 ### Aggiunto

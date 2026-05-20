@@ -10,11 +10,12 @@ const XSLT_FILES = {
   FSM: 'FatturaSemplificata_v1.0.2.xsl',
 };
 
-// Search in data/xslt/ first (Docker volume), then frontend/public/xslt/ (dev)
+// Search order: data/xslt/ (Docker volume override) → backend/public/xslt/ (production: frontend dist copied here) → frontend/public/xslt/ (dev)
 function getXsltSearchPaths() {
   const dataXslt = path.join(path.dirname(FILES_PATH), 'xslt');
+  const backendPublicXslt = path.join(__dirname, '..', '..', 'public', 'xslt');
   const frontendXslt = path.join(__dirname, '..', '..', '..', 'frontend', 'public', 'xslt');
-  return [dataXslt, frontendXslt];
+  return [dataXslt, backendPublicXslt, frontendXslt];
 }
 
 function findXslFile(transmissionFormat) {
