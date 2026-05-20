@@ -36,7 +36,7 @@ function findXslFile(transmissionFormat) {
  */
 function stripXmlNamespaces(xml) {
   return xml
-    .replace(/<\?xml[^?]*\?>/i, '')           // remove XML declaration
+    .replace(/<\?[^?]*\?>/g, '')               // remove all Processing Instructions (XML declaration, xml-stylesheet, etc.)
     .replace(/<(\w+):/g, '<')                  // remove prefix from opening tags
     .replace(/<\/(\w+):/g, '</')               // remove prefix from closing tags
     .replace(/\s+\w+:\w+="[^"]*"/g, '')        // remove namespace-prefixed attributes (xsi:schemaLocation)

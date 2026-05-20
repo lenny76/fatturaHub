@@ -1,5 +1,24 @@
 export const CHANGELOG = [
   {
+    version: '1.6.0',
+    date: '2026-05-20',
+    entries: [
+      {
+        type: 'new',
+        items: [
+          'Modalità Ministeriale: rendering della fattura con il foglio di stile ufficiale dell\'Agenzia delle Entrate',
+        ],
+      },
+      {
+        type: 'fix',
+        items: [
+          'Rendering XSLT ora funzionante (aggiornata libreria xslt-processor v3→v5)',
+          'Errore 500 su fatture con doppio Processing Instruction in testa',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.5.1',
     date: '2026-03-30',
     entries: [

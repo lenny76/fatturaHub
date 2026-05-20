@@ -5,6 +5,17 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.6.0] - 2026-05-20
+
+### Aggiunto
+- **Visualizzazione ministeriale**: la modalità "Ministeriale", che renderizza la fattura usando il foglio di stile ufficiale dell'Agenzia delle Entrate (fatturapa.gov.it), è ora disponibile nel selettore di visualizzazione accanto a Semplificata e Completa.
+
+### Fix
+- **Rendering XSLT non funzionante**: la libreria `xslt-processor` v3.x aveva un bug nell'engine che impediva l'esecuzione dei template (anche `<xsl:if test="true()">` produceva output vuoto), per cui in passato la modalità ministeriale era stata nascosta. Aggiornata a v5.0.11, il rendering ora produce l'HTML completo della fattura.
+- **Errore 500 su fatture con doppio Processing Instruction**: le fatture XML con due PI in testa (`<?xml ...?><?xml-stylesheet ...?>`) restituivano un errore "XML VersionInfo has an unknown version number" perché solo la prima dichiarazione veniva rimossa. Ora vengono rimossi tutti i PI all'inizio del documento.
+
+---
+
 ## [1.5.1] - 2026-03-30
 
 ### Migliorato
