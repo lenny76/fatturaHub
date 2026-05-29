@@ -319,6 +319,37 @@ function buildHtml(xmlString, full, forPdf = false) {
       <td class="r fw">${getText(r, 'Imposta')}</td>
     </tr>`).join('');
 
+  // Causale (può essere ripetuta) + documenti di riferimento sotto DatiGenerali
+  const causali = getAllElements(datiDoc, 'Causale')
+    .map(c => c.textContent.trim())
+    .filter(Boolean);
+  const causaleHtml = causali.length
+    ? `<tr><td class="lbl" style="width:30%">Causale</td><td>${causali.join(' — ')}</td></tr>`
+    : '';
+
+  const refTypes = [
+    ['DatiOrdineAcquisto', 'Ordine'],
+    ['DatiContratto', 'Contratto'],
+    ['DatiConvenzione', 'Convenzione'],
+    ['DatiRicezione', 'Ricezione'],
+    ['DatiFattureCollegate', 'Fattura collegata'],
+  ];
+  const refRows = refTypes.flatMap(([tag, label]) =>
+    getAllElements(datiGen, tag).map(d => {
+      const parts = [
+        getText(d, 'IdDocumento') && `n° <strong>${getText(d, 'IdDocumento')}</strong>`,
+        getText(d, 'Data') && `del ${getText(d, 'Data')}`,
+        getText(d, 'CodiceCUP') && `CUP ${getText(d, 'CodiceCUP')}`,
+        getText(d, 'CodiceCIG') && `CIG ${getText(d, 'CodiceCIG')}`,
+      ].filter(Boolean).join(' &nbsp; ');
+      return parts ? `<tr><td class="lbl" style="width:30%">${label}</td><td>${parts}</td></tr>` : '';
+    })
+  ).filter(Boolean).join('');
+
+  const refHtml = (causaleHtml || refRows)
+    ? `<table class="t">${causaleHtml}${refRows}</table>`
+    : '';
+
   // Payments (completa only)
   const paymentsHtml = full
     ? getAllElements(body, 'DettaglioPagamento').map(p => {
@@ -375,6 +406,8 @@ function buildHtml(xmlString, full, forPdf = false) {
         <td>Tipo: <strong>${docTypeLabel(getText(datiDoc, 'TipoDocumento'))}</strong> &nbsp; Valuta: <strong>${getText(datiDoc, 'Divisa') || 'EUR'}</strong></td>
       </tr>
     </table>
+
+    ${refHtml}
 
     <div class="sec">Righe</div>
     <table class="t">

@@ -1,5 +1,30 @@
 export const CHANGELOG = [
   {
+    version: '1.6.2',
+    date: '2026-05-29',
+    entries: [
+      {
+        type: 'new',
+        items: [
+          'Dati di contratto, ordine, causale e altri documenti di riferimento ora mostrati nelle viste Semplificata e Completa',
+          'Ricerca full-text estesa a numero contratto/ordine, CUP, CIG e causale (ricostruire l\'indice per le fatture già importate)',
+        ],
+      },
+      {
+        type: 'improved',
+        items: [
+          'Avanzamento in console durante "Ricostruisci indice ricerca" e "Ricalcola importi"',
+        ],
+      },
+      {
+        type: 'fix',
+        items: [
+          'Risolto il timeout su "Ricostruisci indice ricerca" e "Ricalcola importi" con archivi grandi',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.6.1',
     date: '2026-05-20',
     entries: [

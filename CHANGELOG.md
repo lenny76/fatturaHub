@@ -5,6 +5,20 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.6.2] - 2026-05-29
+
+### Aggiunto
+- **Documenti di riferimento nelle viste Semplificata e Completa**: ora vengono mostrati i dati del contratto, dell'ordine, della convenzione, della ricezione e delle fatture collegate (numero documento, CUP, CIG) insieme alla causale, subito sotto la testata. Prima questi campi — ad esempio il `DatiContratto` — non comparivano in nessuna delle due viste.
+- **Ricerca sui documenti di riferimento**: la ricerca full-text ora trova le fatture anche per numero di contratto/ordine, CUP, CIG e testo della causale. Per indicizzare le fatture già importate, eseguire una volta "Ricostruisci indice ricerca" dal menu impostazioni.
+
+### Migliorato
+- **Avanzamento in console per le operazioni di manutenzione**: "Ricostruisci indice ricerca" e "Ricalcola importi" ora stampano lo stato di avanzamento (ogni 100 fatture) e un riepilogo finale nel log del backend, utile per seguire l'elaborazione su archivi grandi.
+
+### Fix
+- **Timeout su "Ricostruisci indice ricerca" e "Ricalcola importi"**: su archivi con molte fatture queste operazioni superavano il limite di 30 secondi del client e restituivano un errore di timeout, pur completando lato server. Il timeout è stato rimosso per entrambe le operazioni.
+
+---
+
 ## [1.6.1] - 2026-05-20
 
 ### Fix

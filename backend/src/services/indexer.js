@@ -18,7 +18,7 @@ function ensureStmts() {
       buyer_vat, buyer_fiscal_code, buyer_name,
       invoice_number, invoice_date, document_type, year, month,
       total_amount, taxable_amount, tax_amount,
-      xml_content, file_hash, has_attachments
+      xml_content, file_hash, has_attachments, ref_documents
     ) VALUES (
       @filename, @filePath, @fileType, @direction,
       @transmission_format,
@@ -26,7 +26,7 @@ function ensureStmts() {
       @buyer_vat, @buyer_fiscal_code, @buyer_name,
       @invoice_number, @invoice_date, @document_type, @year, @month,
       @total_amount, @taxable_amount, @tax_amount,
-      @xmlContent, @fileHash, @hasAttachments
+      @xmlContent, @fileHash, @hasAttachments, @ref_documents
     )
   `);
 
@@ -36,13 +36,17 @@ function ensureStmts() {
   `);
 
   const insertFts = db.prepare(`
-    INSERT INTO invoice_fts (invoice_id, supplier_name, descriptions, supplier_vat, invoice_number)
-    VALUES (@invoice_id, @supplier_name, @descriptions, @supplier_vat, @invoice_number)
+    INSERT INTO invoice_fts (invoice_id, supplier_name, descriptions, supplier_vat, invoice_number, ref_documents)
+    VALUES (@invoice_id, @supplier_name, @descriptions, @supplier_vat, @invoice_number, @ref_documents)
   `);
 
   _runTransaction = db.transaction(({ filename, filePath, fileType, direction, fileHash, xmlContent, invoice, lines }) => {
     const hasAttachments = xmlContent && xmlContent.includes('<Allegati>') ? 1 : 0;
-    const result = insert.run({ filename, filePath, fileType, direction, ...invoice, xmlContent, fileHash, hasAttachments });
+    const result = insert.run({
+      filename, filePath, fileType, direction, ...invoice,
+      ref_documents: invoice.ref_documents || '',
+      xmlContent, fileHash, hasAttachments,
+    });
     const invoiceId = result.lastInsertRowid;
 
     for (const line of lines) {
@@ -56,6 +60,7 @@ function ensureStmts() {
       descriptions,
       supplier_vat: invoice.supplier_vat || '',
       invoice_number: invoice.invoice_number || '',
+      ref_documents: invoice.ref_documents || '',
     });
 
     return invoiceId;

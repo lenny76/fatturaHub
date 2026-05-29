@@ -93,6 +93,37 @@ function parseFatturaPA(xmlString) {
     vat_nature: l?.['Natura'] || null,
   }));
 
+  // --- Documenti di riferimento (per ricerca full-text) ---
+  // Contratto, Ordine, Convenzione, Ricezione, Fatture collegate: IdDocumento + CUP + CIG.
+  // Più la/le Causale del documento.
+  const refTokens = [];
+  const refTags = [
+    'DatiOrdineAcquisto',
+    'DatiContratto',
+    'DatiConvenzione',
+    'DatiRicezione',
+    'DatiFattureCollegate',
+  ];
+  for (const tag of refTags) {
+    let blocks = datiGenerali?.[tag];
+    if (!blocks) continue;
+    if (!Array.isArray(blocks)) blocks = [blocks];
+    for (const b of blocks) {
+      for (const field of ['IdDocumento', 'CodiceCUP', 'CodiceCIG']) {
+        const v = b?.[field];
+        if (v != null && String(v).trim()) refTokens.push(String(v).trim());
+      }
+    }
+  }
+  let causale = datiGeneraliDoc?.['Causale'];
+  if (causale != null) {
+    if (!Array.isArray(causale)) causale = [causale];
+    for (const c of causale) {
+      if (c != null && String(c).trim()) refTokens.push(String(c).trim());
+    }
+  }
+  const refDocuments = refTokens.join(' ');
+
   // --- Tax summary ---
   const rawRiepilogo = datiBeniServizi?.['DatiRiepilogo'] || [];
   const riepilogo = Array.isArray(rawRiepilogo) ? rawRiepilogo : [rawRiepilogo];
@@ -121,6 +152,7 @@ function parseFatturaPA(xmlString) {
       total_amount: totalAmount,
       taxable_amount: taxableAmount,
       tax_amount: taxAmount,
+      ref_documents: refDocuments,
     },
     lines,
   };

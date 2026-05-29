@@ -84,6 +84,14 @@ function initDb() {
     // Column already exists, ignore
   }
 
+  // Migration: add ref_documents column if it doesn't exist
+  // (documenti di riferimento — contratto/ordine/ecc. + causale — per ricerca full-text)
+  try {
+    db.exec(`ALTER TABLE invoices ADD COLUMN ref_documents TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
   // Data migration: backfill month (and year) from invoice_date for records imported before the month column existed
   db.exec(`
     UPDATE invoices
@@ -128,9 +136,39 @@ function initDb() {
       descriptions,
       supplier_vat,
       invoice_number,
+      ref_documents,
       tokenize='unicode61'
     );
   `);
+
+  // Migration: ensure the FTS5 table has the ref_documents column.
+  // FTS5 non supporta ALTER TABLE ADD COLUMN: se la colonna manca (DB creato
+  // prima di questa feature) bisogna ricreare la virtual table e ripopolarla.
+  const ftsColumns = db.prepare(`PRAGMA table_info(invoice_fts)`).all().map((c) => c.name);
+  if (!ftsColumns.includes('ref_documents')) {
+    db.exec(`
+      DROP TABLE IF EXISTS invoice_fts;
+      CREATE VIRTUAL TABLE invoice_fts USING fts5(
+        invoice_id UNINDEXED,
+        supplier_name,
+        descriptions,
+        supplier_vat,
+        invoice_number,
+        ref_documents,
+        tokenize='unicode61'
+      );
+      INSERT INTO invoice_fts (invoice_id, supplier_name, descriptions, supplier_vat, invoice_number, ref_documents)
+      SELECT
+        i.id,
+        COALESCE(i.supplier_name, ''),
+        COALESCE((SELECT GROUP_CONCAT(l.description, ' ') FROM invoice_lines l WHERE l.invoice_id = i.id), ''),
+        COALESCE(i.supplier_vat, ''),
+        COALESCE(i.invoice_number, ''),
+        COALESCE(i.ref_documents, '')
+      FROM invoices i;
+    `);
+    console.log('FTS5 index migrated: added ref_documents column');
+  }
 
   console.log('Database initialized at', DB_PATH);
 }

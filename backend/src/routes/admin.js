@@ -39,21 +39,50 @@ router.delete('/reset', (req, res) => {
 router.post('/rebuild-fts', (req, res) => {
   try {
     const db = getDb();
+
+    // Backfill ref_documents (contratto/ordine/causale/...) per i record importati
+    // prima dell'introduzione della colonna, ri-parsando l'XML solo dove manca.
+    const toBackfill = db
+      .prepare('SELECT id, xml_content FROM invoices WHERE ref_documents IS NULL AND xml_content IS NOT NULL')
+      .all();
+    const updateRef = db.prepare('UPDATE invoices SET ref_documents = @ref_documents WHERE id = @id');
+
+    console.log(`[rebuild-fts] avvio: ${toBackfill.length} fatture da ri-parsare per il backfill dei riferimenti`);
+    let parseErrors = 0;
+
     db.transaction(() => {
+      let done = 0;
+      for (const row of toBackfill) {
+        try {
+          const { invoice } = parseFatturaPA(row.xml_content);
+          updateRef.run({ id: row.id, ref_documents: invoice.ref_documents || '' });
+        } catch (_) {
+          updateRef.run({ id: row.id, ref_documents: '' });
+          parseErrors++;
+        }
+        done++;
+        if (done % 100 === 0 || done === toBackfill.length) {
+          console.log(`[rebuild-fts] backfill ${done}/${toBackfill.length}`);
+        }
+      }
+
+      console.log('[rebuild-fts] ricostruzione indice FTS5...');
       db.prepare('DELETE FROM invoice_fts').run();
       db.prepare(`
-        INSERT INTO invoice_fts (invoice_id, supplier_name, descriptions, supplier_vat, invoice_number)
+        INSERT INTO invoice_fts (invoice_id, supplier_name, descriptions, supplier_vat, invoice_number, ref_documents)
         SELECT
           i.id,
           COALESCE(i.supplier_name, ''),
           COALESCE((SELECT GROUP_CONCAT(l.description, ' ') FROM invoice_lines l WHERE l.invoice_id = i.id), ''),
           COALESCE(i.supplier_vat, ''),
-          COALESCE(i.invoice_number, '')
+          COALESCE(i.invoice_number, ''),
+          COALESCE(i.ref_documents, '')
         FROM invoices i
       `).run();
     })();
     const { n } = db.prepare('SELECT COUNT(*) as n FROM invoice_fts').get();
-    res.json({ ok: true, indexed: n });
+    console.log(`[rebuild-fts] completato: ${n} fatture indicizzate, ${toBackfill.length} backfillate${parseErrors ? `, ${parseErrors} errori di parsing` : ''}`);
+    res.json({ ok: true, indexed: n, backfilled: toBackfill.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -75,7 +104,10 @@ router.post('/recalculate-amounts', (req, res) => {
     let updated = 0;
     let errors = 0;
 
+    console.log(`[recalculate-amounts] avvio: ${rows.length} fatture da ricalcolare`);
+
     db.transaction(() => {
+      let done = 0;
       for (const row of rows) {
         try {
           const { invoice } = parseFatturaPA(row.xml_content);
@@ -89,9 +121,14 @@ router.post('/recalculate-amounts', (req, res) => {
         } catch (_) {
           errors++;
         }
+        done++;
+        if (done % 100 === 0 || done === rows.length) {
+          console.log(`[recalculate-amounts] ${done}/${rows.length}`);
+        }
       }
     })();
 
+    console.log(`[recalculate-amounts] completato: ${updated} aggiornate, ${errors} errori`);
     res.json({ ok: true, updated, errors });
   } catch (err) {
     res.status(500).json({ error: err.message });

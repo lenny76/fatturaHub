@@ -373,7 +373,7 @@
               <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
                 <li>• <strong class="text-gray-700 dark:text-gray-300">Visibilità anni</strong>: nasconde anni dalla toolbar e dai risultati</li>
                 <li>• <strong class="text-gray-700 dark:text-gray-300">Tema</strong>: chiaro/scuro, persistito in localStorage</li>
-                <li>• <strong class="text-gray-700 dark:text-gray-300">Ricostruisci indice ricerca</strong>: rigenera l'indice FTS5 da zero; utile se la ricerca testuale restituisce risultati mancanti o inconsistenti</li>
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Ricostruisci indice ricerca</strong>: rigenera l'indice FTS5 da zero; utile se la ricerca testuale restituisce risultati mancanti o inconsistenti. Da eseguire una volta dopo un aggiornamento per rendere ricercabili i documenti di riferimento (contratto, ordine, causale) delle fatture già importate</li>
                 <li>• <strong class="text-gray-700 dark:text-gray-300">Elimina tutti i dati</strong>: reset completo con doppia conferma</li>
               </ul>
             </div>
@@ -798,7 +798,7 @@ async function recalculateAmounts() {
   recalculating.value = true;
   recalcResult.value = null;
   try {
-    const { data } = await api.post('/admin/recalculate-amounts');
+    const { data } = await api.post('/admin/recalculate-amounts', null, { timeout: 0 });
     recalcResult.value = { ok: true, updated: data.updated };
     applyFilters();
   } catch (err) {
@@ -813,7 +813,7 @@ async function rebuildFts() {
   rebuildingFts.value = true;
   rebuildFtsResult.value = null;
   try {
-    const { data } = await api.post('/admin/rebuild-fts');
+    const { data } = await api.post('/admin/rebuild-fts', null, { timeout: 0 });
     rebuildFtsResult.value = { ok: true, indexed: data.indexed };
   } catch (err) {
     rebuildFtsResult.value = { ok: false, error: err.response?.data?.error || err.message };
