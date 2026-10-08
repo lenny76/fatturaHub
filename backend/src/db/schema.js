@@ -11,6 +11,9 @@ function getDb() {
     db = new Database(DB_PATH);
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
+    // Dopo una transazione grande il file -wal resta della dimensione massima raggiunta:
+    // limitarlo fa sì che venga troncato al checkpoint successivo
+    db.pragma('journal_size_limit = 67108864'); // 64 MB
   }
   return db;
 }
@@ -92,6 +95,14 @@ function initDb() {
     // Column already exists, ignore
   }
 
+  // Migration: add supplier_key column if it doesn't exist
+  // (chiave fornitore per raggruppamento/filtro — vedi supplierKey() in xmlParser.js)
+  try {
+    db.exec(`ALTER TABLE invoices ADD COLUMN supplier_key TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
   // Data migration: backfill month (and year) from invoice_date for records imported before the month column existed
   db.exec(`
     UPDATE invoices
@@ -129,6 +140,7 @@ function initDb() {
     CREATE INDEX IF NOT EXISTS idx_invoices_buyer_name ON invoices(buyer_name);
     CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(invoice_date);
     CREATE INDEX IF NOT EXISTS idx_invoices_doc_type ON invoices(document_type);
+    CREATE INDEX IF NOT EXISTS idx_invoices_supplier_key ON invoices(supplier_key);
 
     CREATE VIRTUAL TABLE IF NOT EXISTS invoice_fts USING fts5(
       invoice_id UNINDEXED,
@@ -169,6 +181,19 @@ function initDb() {
     `);
     console.log('FTS5 index migrated: added ref_documents column');
   }
+
+  // Data migration v1: ri-parsa tutte le fatture dopo il fix del parser
+  // (zeri iniziali persi in P.IVA/CF/numero fattura, aliquota 0% salvata come NULL,
+  // supplier_key mancante). Il require è qui per evitare la dipendenza circolare
+  // schema → indexer → schema.
+  if (db.pragma('user_version', { simple: true }) < 1) {
+    const { reindexAllInvoices } = require('../services/indexer');
+    reindexAllInvoices('[migrazione v1]');
+    db.pragma('user_version = 1');
+  }
+
+  // Riporta il file -wal a dimensione zero (vedi journal_size_limit in getDb)
+  db.pragma('wal_checkpoint(TRUNCATE)');
 
   console.log('Database initialized at', DB_PATH);
 }

@@ -61,7 +61,7 @@
       ref="iframeRef"
       :srcdoc="iframeSrcDoc"
       class="flex-1 w-full border-0"
-      sandbox="allow-scripts"
+      sandbox=""
     />
     <!-- Semplificata / Completa: renderer custom -->
     <div v-else class="flex-1 overflow-auto p-3 text-xs">
@@ -163,22 +163,51 @@ function getFormato(att) {
 import { docTypeLabel, paymentMethodLabel, paymentConditionLabel } from '@/utils/docTypes';
 
 // getElementsByTagName is namespace-agnostic (unlike querySelector)
-function getText(node, tag) {
+function rawText(node, tag) {
   return node?.getElementsByTagName(tag)?.[0]?.textContent?.trim() || '';
+}
+
+// Il testo dell'XML lo scrive il fornitore: va sempre escapato prima di finire
+// nell'HTML di buildHtml() (renderizzato con v-html / innerHTML)
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Testo escapato, pronto per l'HTML. Per i valori mostrati via template Vue usare rawText().
+function getText(node, tag) {
+  return escapeHtml(rawText(node, tag));
 }
 
 function getAllElements(node, tag) {
   return [...(node?.getElementsByTagName(tag) || [])];
 }
 
+// ScontoMaggiorazione di riga (ripetibile): SC = sconto (-), MG = maggiorazione (+).
+// Percentuale se presente, altrimenti Importo. Più sconti in cascata separati da spazio (es. "-50% -10%").
+function scontoText(line) {
+  return getAllElements(line, 'ScontoMaggiorazione').map(s => {
+    const sign = getText(s, 'Tipo') === 'MG' ? '+' : '-';
+    const perc = getText(s, 'Percentuale');
+    const importo = getText(s, 'Importo');
+    if (perc) return `${sign}${parseFloat(perc)}%`;
+    if (importo) return `${sign}${importo}`;
+    return '';
+  }).filter(Boolean).join(' ');
+}
+
 function parseAttachments(xmlString) {
   const doc = parseXmlWithNs(xmlString);
   return getAllElements(doc, 'Allegati').map((el, index) => ({
     index,
-    nome: getText(el, 'NomeAttachment') || `allegato_${index}`,
-    formato: getText(el, 'FormatoAttachment'),
-    descrizione: getText(el, 'DescrizioneAttachment'),
-    algoritmo: getText(el, 'AlgoritmoCompressione'),
+    nome: rawText(el, 'NomeAttachment') || `allegato_${index}`,
+    formato: rawText(el, 'FormatoAttachment'),
+    descrizione: rawText(el, 'DescrizioneAttachment'),
+    algoritmo: rawText(el, 'AlgoritmoCompressione'),
   }));
 }
 
@@ -260,7 +289,7 @@ function buildHtml(xmlString, full, forPdf = false) {
   const ddtBlocks = getAllElements(datiGen, 'DatiDDT').map(d => ({
     numero: getText(d, 'NumeroDDT'),
     data: getText(d, 'DataDDT'),
-    righe: new Set(getAllElements(d, 'RiferimentoNumeroLinea').map(n => n.textContent.trim())),
+    righe: new Set(getAllElements(d, 'RiferimentoNumeroLinea').map(n => escapeHtml(n.textContent.trim()))),
   }));
   const ddtByLine = new Map();      // lineNum (string) → ddtInfo
   const ddtGlobal = [];             // DDT senza RiferimentoNumeroLinea → tutta la fattura
@@ -273,7 +302,10 @@ function buildHtml(xmlString, full, forPdf = false) {
       }
     }
   }
-  const numCols = full ? 7 : 4;
+  const lineEls = getAllElements(body, 'DettaglioLinee');
+  // Colonna sconto (completa only): mostrata solo se almeno una riga ha ScontoMaggiorazione
+  const showSconto = full && lineEls.some(l => l.getElementsByTagName('ScontoMaggiorazione').length > 0);
+  const numCols = (full ? 7 : 4) + (showSconto ? 1 : 0);
 
   // Line items (with inline DDT separator rows)
   const globalDdtRows = ddtGlobal.map(d =>
@@ -281,7 +313,7 @@ function buildHtml(xmlString, full, forPdf = false) {
   ).join('');
 
   let lastDdtKey = null;
-  const linesHtml = globalDdtRows + getAllElements(body, 'DettaglioLinee').map(l => {
+  const linesHtml = globalDdtRows + lineEls.map(l => {
     const lineNum = getText(l, 'NumeroLinea');
     const ddt = ddtByLine.get(lineNum);
     const ddtKey = ddt ? `${ddt.numero}|${ddt.data}` : null;
@@ -306,6 +338,7 @@ function buildHtml(xmlString, full, forPdf = false) {
       <td class="r">${lineNum}</td>
       <td>${getText(l, 'Descrizione')}${altriDatiHtml}</td>
       ${full ? `<td class="r">${getText(l, 'Quantita')}</td><td>${getText(l, 'UnitaMisura')}</td><td class="r">${getText(l, 'PrezzoUnitario')}</td>` : ''}
+      ${showSconto ? `<td class="r">${scontoText(l)}</td>` : ''}
       <td class="r fw">${getText(l, 'PrezzoTotale')}</td>
       <td class="r">${getText(l, 'AliquotaIVA')}%</td>
     </tr>`;
@@ -321,7 +354,7 @@ function buildHtml(xmlString, full, forPdf = false) {
 
   // Causale (può essere ripetuta) + documenti di riferimento sotto DatiGenerali
   const causali = getAllElements(datiDoc, 'Causale')
-    .map(c => c.textContent.trim())
+    .map(c => escapeHtml(c.textContent.trim()))
     .filter(Boolean);
   const causaleHtml = causali.length
     ? `<tr><td class="lbl" style="width:30%">Causale</td><td>${causali.join(' — ')}</td></tr>`
@@ -415,10 +448,11 @@ function buildHtml(xmlString, full, forPdf = false) {
         <th class="r">#</th>
         <th>Descrizione</th>
         ${full ? '<th class="r">Qtà</th><th>U.M.</th><th class="r">P.Unit.</th>' : ''}
+        ${showSconto ? '<th class="r">Sconto</th>' : ''}
         <th class="r">Totale</th>
         <th class="r">IVA%</th>
       </tr>
-      ${linesHtml || '<tr><td colspan="7" style="color:#aaa;padding:8px">Nessuna riga</td></tr>'}
+      ${linesHtml || `<tr><td colspan="${numCols}" style="color:#aaa;padding:8px">Nessuna riga</td></tr>`}
     </table>
 
     ${riepilogoHtml ? `<div class="sec">Riepilogo IVA</div>

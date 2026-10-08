@@ -2,6 +2,20 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import api from '@/api';
 
+const DEFAULT_FILTERS = {
+  direction: 'passiva',
+  years: '',
+  months: '',
+  docType: '',
+  supplierKey: '',
+  q: '',
+  amount: '',
+  page: 1,
+  limit: 50,
+  sort: 'invoice_date',
+  order: 'ASC',
+};
+
 export const useInvoicesStore = defineStore('invoices', () => {
   const list = ref([]);
   const total = ref(0);
@@ -9,32 +23,30 @@ export const useInvoicesStore = defineStore('invoices', () => {
   const stats = ref(null);
 
   // Filters
-  const filters = ref({
-    direction: 'passiva',
-    years: '',
-    months: '',
-    docType: '',
-    supplier: '',
-    buyer: '',
-    q: '',
-    amount: '',
-    page: 1,
-    limit: 50,
-    sort: 'invoice_date',
-    order: 'ASC',
-  });
+  const filters = ref({ ...DEFAULT_FILTERS });
 
   const years = computed(() => stats.value?.years || []);
   const docTypes = computed(() => stats.value?.docTypes || []);
 
+  // Filtri che definiscono l'insieme di fatture: condivisi da lista, sidebar fornitori
+  // e barra totali, così conteggi e importi coincidono sempre
+  function filterParams({ withSupplier = true } = {}) {
+    const { years, months, docType, supplierKey, q, amount } = filters.value;
+    const params = {};
+    if (years) params.years = years;
+    if (months) params.months = months;
+    if (docType) params.docType = docType;
+    if (q) params.q = q;
+    if (amount) params.amount = amount;
+    if (withSupplier && supplierKey) params.supplierKey = supplierKey;
+    return params;
+  }
+
   async function fetchList() {
     loading.value = true;
     try {
-      const params = { ...filters.value };
-      // Use search endpoint when text query or supplier/buyer filter is set
-      const useSearch = params.q || params.amount || params.supplier || params.buyer;
-      const endpoint = useSearch ? '/search' : '/invoices';
-      const { data } = await api.get(endpoint, { params });
+      const { page, limit, sort, order } = filters.value;
+      const { data } = await api.get('/invoices', { params: { ...filterParams(), page, limit, sort, order } });
       list.value = data.data;
       total.value = data.total;
     } finally {
@@ -48,10 +60,13 @@ export const useInvoicesStore = defineStore('invoices', () => {
   }
 
   async function fetchParties() {
-    const params = { years: filters.value.years, months: filters.value.months };
-    if (filters.value.q) params.q = filters.value.q;
-    const { data } = await api.get('/invoices/parties', { params });
+    const { data } = await api.get('/invoices/parties', { params: filterParams({ withSupplier: false }) });
     return data.suppliers;
+  }
+
+  async function fetchAnalysis() {
+    const { data } = await api.get('/stats/analysis', { params: filterParams() });
+    return data;
   }
 
   async function deleteInvoice(id) {
@@ -66,8 +81,8 @@ export const useInvoicesStore = defineStore('invoices', () => {
   }
 
   function resetFilters() {
-    filters.value = { direction: 'passiva', years: '', months: '', docType: '', supplier: '', buyer: '', q: '', amount: '', page: 1, limit: 50, sort: 'invoice_date', order: 'ASC' };
+    filters.value = { ...DEFAULT_FILTERS };
   }
 
-  return { list, total, loading, filters, stats, years, docTypes, fetchList, fetchStats, fetchParties, deleteInvoice, setFilter, resetFilters };
+  return { list, total, loading, filters, stats, years, docTypes, fetchList, fetchStats, fetchParties, fetchAnalysis, deleteInvoice, setFilter, resetFilters };
 });

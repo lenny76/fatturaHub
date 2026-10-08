@@ -128,7 +128,7 @@
               <span v-else-if="recalcResult" :class="recalcResult.ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
                 {{ recalcResult.ok ? `✓ Aggiornate ${recalcResult.updated} fatture` : `✗ ${recalcResult.error}` }}
               </span>
-              <span v-else>💶 Ricalcola importi</span>
+              <span v-else title="Rilegge tutte le fatture XML e aggiorna anagrafiche, importi, righe e indice di ricerca">💶 Ricalcola dati dalle fatture</span>
             </button>
             <div class="border-t border-gray-100 dark:border-gray-700 my-1" />
             <button
@@ -800,6 +800,7 @@ async function recalculateAmounts() {
   try {
     const { data } = await api.post('/admin/recalculate-amounts', null, { timeout: 0 });
     recalcResult.value = { ok: true, updated: data.updated };
+    await store.fetchStats();
     applyFilters();
   } catch (err) {
     recalcResult.value = { ok: false, error: err.response?.data?.error || err.message };

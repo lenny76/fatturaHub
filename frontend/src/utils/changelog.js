@@ -1,5 +1,44 @@
 export const CHANGELOG = [
   {
+    version: '1.7.0',
+    date: '2026-10-08',
+    entries: [
+      {
+        type: 'new',
+        items: [
+          'Colonna Sconto nella vista Completa per sconti e maggiorazioni di riga',
+        ],
+      },
+      {
+        type: 'improved',
+        items: [
+          'Fornitori raggruppati per Partita IVA: niente più doppioni per ragioni sociali scritte in modo diverso',
+          'Lista, sidebar fornitori e barra dei totali ora usano sempre gli stessi filtri',
+          '"Ricalcola dati dalle fatture" rilegge tutti gli XML e aggiorna anagrafiche, importi e righe',
+          'Database più compatto: il file di journal viene ridotto automaticamente',
+          'Immagine Docker aggiornata a Node.js 22',
+        ],
+      },
+      {
+        type: 'fix',
+        items: [
+          'P.IVA, codici fiscali e numeri fattura non perdono più gli zeri iniziali (correzione automatica al primo avvio)',
+          'Le note di credito ora vengono sottratte dai totali e mostrate in negativo',
+          'Aliquota IVA 0% e importi a zero delle righe salvati correttamente',
+          'Il filtro fornitore non include più fornitori con nome simile',
+        ],
+      },
+      {
+        type: 'security',
+        items: [
+          'I testi delle fatture non possono più eseguire codice nella pagina',
+          'Le API non sono più accessibili da altri siti aperti nel browser',
+          'Dipendenze aggiornate con correzioni di sicurezza (multer 2, better-sqlite3 12, Express)',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.6.2',
     date: '2026-05-29',
     entries: [

@@ -10,3 +10,5 @@ CLAUDE.md
 AGENTS.md
 .vscode/
 temp/
+# Tool esterno GPL per il download dalle AdE (NON committare: licenza GPL incompatibile con MIT)
+fec-test/

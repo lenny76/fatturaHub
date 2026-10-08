@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const path = require('path');
 const { rateLimit } = require('express-rate-limit');
 const { initDb } = require('./db/schema');
@@ -50,8 +49,27 @@ const adminLimiter = rateLimit({
   message: { error: 'Troppi comandi admin, riprova tra un\'ora.' },
 });
 
-app.use(cors());
+// Niente CORS: frontend e API sono sullo stesso origin. Con cors() aperto e senza
+// autenticazione, qualsiasi sito visitato nel browser poteva leggere le fatture
+// o chiamare DELETE /api/admin/reset su localhost.
 app.use(express.json());
+
+// Anti-CSRF: le richieste che modificano dati devono provenire dalla stessa origin.
+// I browser inviano sempre Origin sulle POST/DELETE cross-site (anche "null" da iframe sandbox).
+app.use('/api', (req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD') return next();
+  const origin = req.headers.origin;
+  if (origin) {
+    let originHost = null;
+    try { originHost = new URL(origin).host; } catch { /* "null" o malformata */ }
+    // X-Forwarded-Host: dietro un reverse proxy l'Host può essere riscritto
+    const allowedHosts = [req.headers.host, req.headers['x-forwarded-host']].filter(Boolean);
+    if (!allowedHosts.includes(originHost)) {
+      return res.status(403).json({ error: 'Richiesta cross-origin non consentita' });
+    }
+  }
+  next();
+});
 
 // Static: serve original invoice files for download
 app.use('/files', express.static(process.env.FILES_PATH || path.join(__dirname, '../../data/files')));

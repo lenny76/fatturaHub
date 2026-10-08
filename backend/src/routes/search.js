@@ -1,112 +1,21 @@
 const express = require('express');
 const { getDb } = require('../db/schema');
+const { listInvoices } = require('../db/invoiceFilters');
 
 const router = express.Router();
 
 /**
  * GET /api/search
- * Query params: q (full-text), direction, years, months, docType, supplier, buyer
+ * Alias di GET /api/invoices: stessi filtri (q, amount, years, months, docType,
+ * supplierKey, page, limit, sort, order) — vedi db/invoiceFilters.js
  */
 router.get('/', (req, res) => {
-  const { q, amount, direction, years, months, docType, supplier, buyer, page = 1, limit = 50, sort = 'invoice_date', order = 'DESC' } = req.query;
-
-  const validSorts = ['invoice_date', 'supplier_name', 'buyer_name', 'total_amount', 'invoice_number', 'imported_at'];
-  const safeSort = validSorts.includes(sort) ? sort : 'invoice_date';
-  const safeOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-
-  const db = getDb();
-  const offset = (parseInt(page) - 1) * parseInt(limit);
-
-  // Full-text search via FTS5
-  if (q && q.trim()) {
-    const ftsQuery = `"${q.trim().replace(/"/g, '')}"*`;
-    const ftsRows = db.prepare(`
-      SELECT invoice_id FROM invoice_fts WHERE invoice_fts MATCH ?
-    `).all(ftsQuery);
-
-    const ids = ftsRows.map(r => r.invoice_id);
-    if (ids.length === 0) return res.json({ total: 0, page: 1, limit: parseInt(limit), data: [] });
-
-    const placeholders = ids.map(() => '?').join(',');
-    const conditions = [`id IN (${placeholders})`];
-    const params = [...ids];
-
-    if (direction) { conditions.push('direction = ?'); params.push(direction); }
-    if (years) {
-      const yearsArr = years.split(',').map(y => parseInt(y)).filter(y => !isNaN(y));
-      if (yearsArr.length > 0) {
-        conditions.push(`year IN (${yearsArr.map(() => '?').join(',')})`);
-        params.push(...yearsArr);
-      }
-    }
-    if (months) {
-      const monthsArr = months.split(',').map(m => parseInt(m)).filter(m => !isNaN(m) && m >= 1 && m <= 12);
-      if (monthsArr.length > 0) {
-        conditions.push(`month IN (${monthsArr.map(() => '?').join(',')})`);
-        params.push(...monthsArr);
-      }
-    }
-    if (docType) { conditions.push('document_type = ?'); params.push(docType); }
-    if (supplier) { conditions.push("supplier_name LIKE ?"); params.push(`%${supplier}%`); }
-    const amountVal = amount ? parseFloat(amount) : NaN;
-    if (!isNaN(amountVal)) {
-      conditions.push('(ABS(COALESCE(total_amount, -1) - ?) < 0.005 OR ABS(COALESCE(taxable_amount, -1) - ?) < 0.005)');
-      params.push(amountVal, amountVal);
-    }
-
-    const where = 'WHERE ' + conditions.join(' AND ');
-    const total = db.prepare(`SELECT COUNT(*) as cnt FROM invoices ${where}`).get(params).cnt;
-    const rows = db.prepare(`
-      SELECT id, filename, file_type, direction, supplier_name, buyer_name,
-             invoice_number, invoice_date, document_type, year,
-             total_amount, taxable_amount, tax_amount, has_attachments
-      FROM invoices ${where}
-      ORDER BY ${safeSort} ${safeOrder}
-      LIMIT ${parseInt(limit)} OFFSET ${offset}
-    `).all(params);
-
-    return res.json({ total, page: parseInt(page), limit: parseInt(limit), data: rows });
+  try {
+    res.json(listInvoices(getDb(), req.query));
+  } catch (err) {
+    console.error('[search]', err.message);
+    res.status(500).json({ error: err.message });
   }
-
-  // Filtered search without FTS
-  const conditions = [];
-  const params = [];
-
-  if (direction) { conditions.push('direction = ?'); params.push(direction); }
-  if (years) {
-    const yearsArr = years.split(',').map(y => parseInt(y)).filter(y => !isNaN(y));
-    if (yearsArr.length > 0) {
-      conditions.push(`year IN (${yearsArr.map(() => '?').join(',')})`);
-      params.push(...yearsArr);
-    }
-  }
-  if (months) {
-    const monthsArr = months.split(',').map(m => parseInt(m)).filter(m => !isNaN(m) && m >= 1 && m <= 12);
-    if (monthsArr.length > 0) {
-      conditions.push(`month IN (${monthsArr.map(() => '?').join(',')})`);
-      params.push(...monthsArr);
-    }
-  }
-  if (docType) { conditions.push('document_type = ?'); params.push(docType); }
-  if (supplier) { conditions.push("supplier_name LIKE ?"); params.push(`%${supplier}%`); }
-  const amountVal = amount ? parseFloat(amount) : NaN;
-  if (!isNaN(amountVal)) {
-    conditions.push('(ABS(COALESCE(total_amount, -1) - ?) < 0.005 OR ABS(COALESCE(taxable_amount, -1) - ?) < 0.005)');
-    params.push(amountVal, amountVal);
-  }
-
-  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
-  const total = db.prepare(`SELECT COUNT(*) as cnt FROM invoices ${where}`).get(params).cnt;
-  const rows = db.prepare(`
-    SELECT id, filename, file_type, direction, supplier_name, buyer_name,
-           invoice_number, invoice_date, document_type, year,
-           total_amount, taxable_amount, tax_amount, has_attachments
-    FROM invoices ${where}
-    ORDER BY ${safeSort} ${safeOrder}
-    LIMIT ${parseInt(limit)} OFFSET ${offset}
-  `).all(params);
-
-  res.json({ total, page: parseInt(page), limit: parseInt(limit), data: rows });
 });
 
 module.exports = router;

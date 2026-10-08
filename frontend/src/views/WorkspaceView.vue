@@ -31,24 +31,24 @@
       <div class="flex-1 overflow-y-auto">
         <ul>
           <li
-            @click="filterBySupplier(''); showSidebar = false"
-            :class="activeSupplier === '' ? 'bg-blue-600 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'"
+            @click="filterBySupplier(null); showSidebar = false"
+            :class="!activeSupplier ? 'bg-blue-600 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'"
             class="px-3 py-1.5 text-xs cursor-pointer flex justify-between items-center"
           >
             <span>Tutti</span>
-            <span :class="activeSupplier === '' ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'" class="rounded-full px-1.5 py-0.5 text-xs font-medium">
+            <span :class="!activeSupplier ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'" class="rounded-full px-1.5 py-0.5 text-xs font-medium">
               {{ store.total }}
             </span>
           </li>
           <li
-            v-for="s in filteredSupplierList" :key="s.name"
-            @click="filterBySupplier(s.name); showSidebar = false"
-            :class="activeSupplier === s.name ? 'bg-blue-600 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'"
+            v-for="s in filteredSupplierList" :key="s.key"
+            @click="filterBySupplier(s); showSidebar = false"
+            :class="activeSupplier?.key === s.key ? 'bg-blue-600 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'"
             class="px-3 py-1.5 text-xs cursor-pointer flex justify-between items-center"
             :title="s.name"
           >
             <span class="truncate max-w-[180px]">{{ s.name }}</span>
-            <span :class="activeSupplier === s.name ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'" class="rounded-full px-1.5 py-0.5 text-xs font-medium flex-none ml-1">
+            <span :class="activeSupplier?.key === s.key ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'" class="rounded-full px-1.5 py-0.5 text-xs font-medium flex-none ml-1">
               {{ s.count }}
             </span>
           </li>
@@ -69,7 +69,7 @@
         >
           ☰ Fornitori
         </button>
-        <span v-if="activeSupplier" class="text-xs text-blue-600 truncate flex-1">{{ activeSupplier }}</span>
+        <span v-if="activeSupplier" class="text-xs text-blue-600 truncate flex-1">{{ activeSupplier.name }}</span>
       </div>
 
       <div v-if="store.loading" class="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">
@@ -96,10 +96,10 @@
               <td class="col-td font-mono">{{ inv.invoice_date?.slice(0,10) }}</td>
               <td class="col-td font-mono hidden sm:table-cell" :class="selectedId === inv.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'">{{ inv.invoice_number }}</td>
               <td class="col-td truncate max-w-[100px] sm:max-w-[160px]">{{ inv.supplier_name }}</td>
-              <td class="col-td font-medium tabular-nums text-right hidden sm:table-cell" :class="selectedId === inv.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'">{{ formatCurrency(inv.taxable_amount) }}</td>
+              <td class="col-td font-medium tabular-nums text-right hidden sm:table-cell" :class="selectedId === inv.id ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'">{{ formatCurrency(signed(inv, inv.taxable_amount)) }}</td>
               <td class="col-td font-medium tabular-nums">
                 <div class="flex items-center justify-end">
-                  {{ formatCurrency(inv.total_amount) }}
+                  {{ formatCurrency(signed(inv, inv.total_amount)) }}
                   <span class="w-4 flex-none flex justify-center ml-1">
                     <span
                       v-if="inv.has_attachments"
@@ -155,7 +155,7 @@
               <div><span class="font-semibold">Fornitore:</span> {{ selectedInvoice?.supplier_name || '—' }}</div>
               <div><span class="font-semibold">N. fattura:</span> {{ selectedInvoice?.invoice_number || '—' }}</div>
               <div><span class="font-semibold">Data:</span> {{ selectedInvoice?.invoice_date?.slice(0,10) || '—' }}</div>
-              <div><span class="font-semibold">Importo:</span> {{ formatCurrency(selectedInvoice?.total_amount) }}</div>
+              <div><span class="font-semibold">Importo:</span> {{ formatCurrency(signed(selectedInvoice, selectedInvoice?.total_amount)) }}</div>
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400">Questa operazione è <strong>irreversibile</strong>. Vuoi continuare?</p>
           </div>
@@ -271,7 +271,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useInvoicesStore } from '@/stores/invoices';
 import InvoiceViewer from '@/components/InvoiceViewer.vue';
 import XmlViewer from '@/components/XmlViewer.vue';
-import api from '@/api';
+import { CREDIT_NOTE_TYPES } from '@/utils/docTypes';
 
 const invoiceViewerRef = ref(null);
 
@@ -284,7 +284,7 @@ const deleteStep = ref(1);
 const deleteConfirmText = ref('');
 const viewMode = ref(localStorage.getItem('viewMode') || 'semplificata');
 watch(viewMode, (val) => localStorage.setItem('viewMode', val));
-const activeSupplier = ref('');
+const activeSupplier = ref(null); // { key, name } | null
 const supplierList = ref([]);
 const showSidebar = ref(false);
 const supplierSearch = ref('');
@@ -343,11 +343,6 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown);
 });
-watch(() => store.filters.years, fetchParties);
-watch(() => store.filters.months, fetchParties);
-watch(() => store.filters.q, fetchParties);
-watch(() => store.filters.supplier, fetchParties);
-
 watch(() => store.list, () => {
   if (selectedId.value && !store.list.find(i => i.id === selectedId.value)) {
     selectedId.value = null;
@@ -383,10 +378,9 @@ async function executeDelete() {
   selectedId.value = null;
 }
 
-async function filterBySupplier(name) {
-  activeSupplier.value = name;
-  store.setFilter('supplier', name);
-  store.setFilter('page', 1);
+async function filterBySupplier(supplier) {
+  activeSupplier.value = supplier;
+  store.setFilter('supplierKey', supplier?.key || '');
   await store.fetchList();
 }
 
@@ -411,17 +405,16 @@ const fmtEur = v => v == null ? '—' : new Intl.NumberFormat('it-IT', { style: 
 
 async function fetchAnalisi() {
   try {
-    const params = {};
-    if (store.filters.years) params.years = store.filters.years;
-    if (store.filters.months) params.months = store.filters.months;
-    if (store.filters.docType) params.docType = store.filters.docType;
-    if (store.filters.supplier) params.supplier = store.filters.supplier;
-    if (store.filters.q) params.q = store.filters.q;
-    const { data } = await api.get('/stats/analysis', { params });
-    analisiData.value = data;
+    analisiData.value = await store.fetchAnalysis();
   } catch {
     analisiData.value = null;
   }
+}
+
+// Note di credito: importi positivi nell'XML, mostrati in negativo (come nei totali)
+function signed(inv, val) {
+  if (val == null || !inv) return val;
+  return CREDIT_NOTE_TYPES.includes(inv.document_type) ? -Math.abs(val) : val;
 }
 
 function formatCurrency(val) {

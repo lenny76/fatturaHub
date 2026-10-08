@@ -6,127 +6,48 @@ const { getDb } = require('../db/schema');
 const { deleteInvoice } = require('../services/indexer');
 const { deleteInvoiceFile, FILES_PATH } = require('../utils/fileStore');
 const { findXslFile, transformToHtml } = require('../services/xsltTransformer');
+const { buildInvoiceFilters, listInvoices } = require('../db/invoiceFilters');
 
 const router = express.Router();
 
 /**
  * GET /api/invoices
- * Query params: direction, year, docType, page, limit, sort, order
+ * Query params: q, amount, years, months, docType, supplierKey, page, limit, sort, order
+ * (vedi db/invoiceFilters.js)
  */
 router.get('/', (req, res) => {
-  const {
-    direction,
-    years,
-    months,
-    docType,
-    page = 1,
-    limit = 50,
-    sort = 'invoice_date',
-    order = 'DESC',
-  } = req.query;
-
-  const validSorts = ['invoice_date', 'supplier_name', 'buyer_name', 'total_amount', 'invoice_number', 'imported_at'];
-  const safeSort = validSorts.includes(sort) ? sort : 'invoice_date';
-  const safeOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-
-  const conditions = [];
-  const params = [];
-
-  if (direction) { conditions.push('direction = ?'); params.push(direction); }
-  if (years) {
-    const yearsArr = years.split(',').map(y => parseInt(y)).filter(y => !isNaN(y));
-    if (yearsArr.length > 0) {
-      conditions.push(`year IN (${yearsArr.map(() => '?').join(',')})`);
-      params.push(...yearsArr);
-    }
+  try {
+    res.json(listInvoices(getDb(), req.query));
+  } catch (err) {
+    console.error('[invoices]', err.message);
+    res.status(500).json({ error: err.message });
   }
-  if (months) {
-    const monthsArr = months.split(',').map(m => parseInt(m)).filter(m => !isNaN(m) && m >= 1 && m <= 12);
-    if (monthsArr.length > 0) {
-      conditions.push(`month IN (${monthsArr.map(() => '?').join(',')})`);
-      params.push(...monthsArr);
-    }
-  }
-  if (docType) { conditions.push('document_type = ?'); params.push(docType); }
-
-  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
-  const offset = (parseInt(page) - 1) * parseInt(limit);
-
-  const db = getDb();
-  const total = db.prepare(`SELECT COUNT(*) as cnt FROM invoices ${where}`).get(params).cnt;
-  const rows = db.prepare(`
-    SELECT id, filename, file_type, direction, transmission_format,
-           supplier_name, buyer_name,
-           invoice_number, invoice_date, document_type, year,
-           total_amount, taxable_amount, tax_amount, imported_at, has_attachments
-    FROM invoices ${where}
-    ORDER BY ${safeSort} ${safeOrder}
-    LIMIT ${parseInt(limit)} OFFSET ${offset}
-  `).all(params);
-
-  res.json({ total, page: parseInt(page), limit: parseInt(limit), data: rows });
 });
 
 /**
  * GET /api/invoices/parties
- * Returns all unique suppliers with counts (for sidebar filter).
- * Query: years, months, q, supplier
+ * Fornitori (raggruppati per supplier_key) con conteggio, per la sidebar.
+ * Stessi filtri della lista, escluso il fornitore stesso.
+ * Il nome mostrato è quello della fattura più recente del fornitore.
  * MUST be defined before /:id to avoid Express matching 'parties' as an id.
  */
 router.get('/parties', (req, res) => {
-  const { years, months, q, supplier } = req.query;
-  const db = getDb();
+  try {
+    const { where, params } = buildInvoiceFilters({ ...req.query, supplierKey: undefined });
+    // MAX(invoice_date) fa sì che supplier_name provenga dalla fattura più recente (bare column SQLite)
+    const suppliers = getDb().prepare(`
+      SELECT supplier_key as key, supplier_name as name, COUNT(*) as count, MAX(invoice_date) as last_date
+      FROM invoices ${where} AND supplier_key IS NOT NULL
+      GROUP BY supplier_key
+    `).all(params)
+      .map(({ key, name, count }) => ({ key, name, count }))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'it', { sensitivity: 'base' }));
 
-  // If search query is provided, use FTS to find matching invoice IDs first
-  let invoiceIds = null;
-  if (q && q.trim()) {
-    const ftsQuery = `"${q.trim().replace(/"/g, '')}"*`;
-    const ftsRows = db.prepare(`
-      SELECT invoice_id FROM invoice_fts WHERE invoice_fts MATCH ?
-    `).all(ftsQuery);
-    invoiceIds = ftsRows.map(r => r.invoice_id);
-    if (invoiceIds.length === 0) {
-      return res.json({ suppliers: [] });
-    }
+    res.json({ suppliers });
+  } catch (err) {
+    console.error('[parties]', err.message);
+    res.status(500).json({ error: err.message });
   }
-
-  const params = [];
-  const conditions = ["direction='passiva'", 'supplier_name IS NOT NULL'];
-
-  if (invoiceIds) {
-    conditions.push(`id IN (${invoiceIds.map(() => '?').join(',')})`);
-    params.push(...invoiceIds);
-  }
-
-  if (supplier) {
-    conditions.push("supplier_name LIKE ?");
-    params.push(`%${supplier}%`);
-  }
-
-  if (years) {
-    const yearsArr = years.split(',').map(y => parseInt(y)).filter(y => !isNaN(y));
-    if (yearsArr.length > 0) {
-      conditions.push(`year IN (${yearsArr.map(() => '?').join(',')})`);
-      params.push(...yearsArr);
-    }
-  }
-  if (months) {
-    const monthsArr = months.split(',').map(m => parseInt(m)).filter(m => !isNaN(m) && m >= 1 && m <= 12);
-    if (monthsArr.length > 0) {
-      conditions.push(`month IN (${monthsArr.map(() => '?').join(',')})`);
-      params.push(...monthsArr);
-    }
-  }
-
-  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
-
-  const suppliers = db.prepare(`
-    SELECT supplier_name as name, COUNT(*) as count
-    FROM invoices ${where}
-    GROUP BY supplier_name ORDER BY supplier_name COLLATE NOCASE ASC
-  `).all(params);
-
-  res.json({ suppliers });
 });
 
 /**
@@ -225,7 +146,7 @@ router.get('/:id/attachments/:index/download', (req, res) => {
     const attParser = new XMLParser({
       ignoreAttributes: false,
       isArray: (name) => name === 'Allegati',
-      parseTagValue: true,
+      parseTagValue: false, // valori come stringhe (es. NomeAttachment numerico non diventa number)
     });
     const doc = attParser.parse(row.xml_content);
     const rootKey = Object.keys(doc).find(

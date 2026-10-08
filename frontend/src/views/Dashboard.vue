@@ -23,7 +23,7 @@
       <!-- Stat cards -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <StatCard label="Fatture passive" :value="stats.totals.total" color="green" />
-        <StatCard label="Importo totale" :value="formatCurrency(stats.totals.total_amount)" />
+        <StatCard label="Importo totale (al netto note di credito)" :value="formatCurrency(stats.totals.total_amount)" />
         <StatCard label="Anni" :value="stats.years.length" color="blue" />
       </div>
 
@@ -32,7 +32,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h2 class="font-semibold mb-3 text-gray-700 dark:text-gray-200">Top fornitori</h2>
           <ul class="space-y-1.5 text-sm">
-            <li v-for="s in stats.topSuppliers" :key="s.supplier_name" class="flex justify-between items-center gap-2">
+            <li v-for="s in stats.topSuppliers" :key="s.supplier_key" class="flex justify-between items-center gap-2">
               <span class="truncate text-gray-700 dark:text-gray-300">{{ s.supplier_name }}</span>
               <span class="shrink-0 text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded px-1.5 py-0.5">{{ s.count }}</span>
             </li>
@@ -104,6 +104,7 @@ function formatCurrency(val) {
   return new Intl.NumberFormat('it-IT', {
     style: 'currency',
     currency: 'EUR',
+    useGrouping: 'always',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(val);

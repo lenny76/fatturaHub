@@ -5,6 +5,31 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.7.0] - 2026-10-08
+
+### Aggiunto
+- **Colonna Sconto nella vista Completa**: gli sconti e le maggiorazioni di riga (`ScontoMaggiorazione`) ora sono mostrati in una colonna dedicata tra prezzo unitario e totale, con più sconti in cascata (es. `-50% -10%`). La colonna compare solo nelle fatture che hanno sconti di riga, anche nel PDF scaricato.
+
+### Migliorato
+- **Fornitori raggruppati per Partita IVA**: la sidebar non duplica più lo stesso fornitore quando la ragione sociale cambia tra una fattura e l'altra (es. "TELEPASS SPA" / "TELEPASS S.P.A."); viene mostrato il nome dell'ultima fattura. Le società distinte che condividono la P.IVA di un Gruppo IVA restano separate, così come i fornitori esteri con P.IVA generica.
+- **Totali sempre coerenti con la lista**: lista, sidebar fornitori e barra dei totali usano ora esattamente gli stessi filtri. Prima la barra dei totali ignorava la ricerca per importo e la sidebar ignorava il filtro per tipo documento.
+- **"Ricalcola dati dalle fatture"**: la voce del menu impostazioni (prima "Ricalcola importi") ora rilegge tutte le fatture XML e aggiorna anagrafiche, numeri, importi, righe e indice di ricerca.
+- **Spazio su disco**: il file di journal del database (`fatturahub.db-wal`), che dopo operazioni massive poteva restare grande quanto il database stesso, viene ora ridotto automaticamente.
+- **Docker su Node.js 22**: l'immagine passa da Node 20 (fuori supporto) a Node 22. I percorsi dei dati sono impostati nell'immagine, così anche un semplice `docker run` salva il database nel volume `/app/data`.
+
+### Fix
+- **Zeri iniziali persi in P.IVA, codici fiscali e numeri fattura**: il parser interpretava i codici come numeri, per cui ad esempio la P.IVA `IT00470550013` veniva salvata come `IT470550013`, i codici fiscali come `1234567890.0` e il numero fattura `000043` come `43`. Al primo avvio dopo l'aggiornamento tutte le fatture vengono ri-elaborate automaticamente dall'XML originale (circa 2 minuti ogni 8.000 fatture; durante l'operazione l'app non risponde).
+- **Note di credito sommate ai totali**: le note di credito (TD04, TD08) venivano sommate come le fatture invece di essere sottratte, gonfiando imponibile, IVA e totale nella barra dei totali e nella dashboard. Ora sono sottratte e nella lista appaiono con importo negativo.
+- **Aliquota IVA 0% salvata come vuota**: le righe esenti/non imponibili (aliquota 0%) avevano l'aliquota registrata come assente; lo stesso per quantità e prezzi a zero.
+- **Filtro fornitore impreciso**: selezionando un fornitore venivano incluse anche le fatture di altri fornitori il cui nome lo contiene (es. "ENEL" includeva "ENEL ENERGIA"), con conteggi diversi da quelli della barra dei totali.
+
+### Sicurezza
+- **Contenuto delle fatture non più eseguibile**: i testi presenti nell'XML (descrizioni, causali, ragioni sociali…) vengono ora sempre trattati come testo nelle viste Semplificata e Completa. Prima una fattura costruita ad arte poteva eseguire codice nella pagina. La vista Ministeriale è ora completamente isolata (sandbox senza script).
+- **Protezione da siti esterni**: rimossa la configurazione CORS aperta e aggiunto un controllo sull'origine delle richieste che modificano i dati. Prima un qualsiasi sito aperto nello stesso browser poteva leggere le fatture o cancellare l'archivio tramite le API su localhost.
+- **Dipendenze aggiornate**: multer 2.x (vulnerabilità DoS nell'upload), better-sqlite3 12, Express 4.22.3 e altre dipendenze con correzioni di sicurezza.
+
+---
+
 ## [1.6.2] - 2026-05-29
 
 ### Aggiunto

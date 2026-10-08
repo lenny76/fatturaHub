@@ -1,3 +1,6 @@
+// Note di credito: importi da sottrarre nei totali (allineato a backend/src/db/invoiceFilters.js)
+export const CREDIT_NOTE_TYPES = ['TD04', 'TD08'];
+
 export const DOC_TYPES = {
   TD01: 'Fattura',
   TD02: 'Acconto/anticipo su fattura',

@@ -1,11 +1,40 @@
 const { XMLParser, XMLValidator } = require('fast-xml-parser');
 
+// parseTagValue: false — tutti i valori restano stringhe. Con true i codici numerici
+// perdono gli zeri iniziali (P.IVA "01234567890" → 1234567890, Numero "000043" → 43).
+// Gli importi vengono convertiti esplicitamente con num().
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   isArray: (name) => ['DettaglioLinee', 'DatiRiepilogo', 'FatturaElettronicaBody'].includes(name),
-  parseTagValue: true,
+  parseTagValue: false,
 });
+
+// null solo se assente/non numerico: 0 è un valore valido (aliquota 0%, TD27, ...)
+function num(value) {
+  const n = parseFloat(value);
+  return isNaN(n) ? null : n;
+}
+
+// P.IVA generica dei soggetti esteri senza partita IVA (es. "CNOO99999999999")
+const PLACEHOLDER_VAT = /^[A-Z]{2}O{2}9{11}$/;
+
+/**
+ * Chiave che identifica un fornitore per raggruppamento e filtro.
+ * - P.IVA, così le varianti della ragione sociale ("SPA" / "S.P.A.") restano unite
+ * - P.IVA + CF se il CF è di una società (11 cifre) diverso dalla P.IVA: membri di un
+ *   Gruppo IVA, società distinte che condividono la stessa P.IVA
+ * - CF o nome se la P.IVA manca o è generica (fornitori esteri diversi con la stessa P.IVA fittizia)
+ */
+function supplierKey(vat, fiscalCode, name) {
+  if (vat && !PLACEHOLDER_VAT.test(vat)) {
+    const vatDigits = vat.slice(2);
+    return fiscalCode && /^\d{11}$/.test(fiscalCode) && fiscalCode !== vatDigits
+      ? `${vat}/${fiscalCode}`
+      : vat;
+  }
+  return fiscalCode || (name ? `NOME:${name.toUpperCase()}` : null);
+}
 
 /**
  * Parse a FatturaPA XML string and extract structured data.
@@ -74,8 +103,7 @@ function parseFatturaPA(xmlString) {
   const invoiceNumber = String(datiGeneraliDoc?.['Numero'] || '');
   const invoiceDate = String(datiGeneraliDoc?.['Data'] || '');
   const documentType = String(datiGeneraliDoc?.['TipoDocumento'] || '');
-  const _rawTotal = parseFloat(datiGeneraliDoc?.['ImportoTotaleDocumento']);
-  const totalAmount = isNaN(_rawTotal) ? null : _rawTotal;
+  const totalAmount = num(datiGeneraliDoc?.['ImportoTotaleDocumento']);
   const year = invoiceDate ? parseInt(invoiceDate.split('-')[0]) : null;
   const month = invoiceDate ? parseInt(invoiceDate.split('-')[1]) : null;
 
@@ -85,11 +113,11 @@ function parseFatturaPA(xmlString) {
   const lines = (Array.isArray(rawLines) ? rawLines : [rawLines]).map((l) => ({
     line_number: parseInt(l?.['NumeroLinea']) || null,
     description: String(l?.['Descrizione'] || ''),
-    quantity: parseFloat(l?.['Quantita']) || null,
+    quantity: num(l?.['Quantita']),
     unit: l?.['UnitaMisura'] || null,
-    unit_price: parseFloat(l?.['PrezzoUnitario']) || null,
-    total_price: parseFloat(l?.['PrezzoTotale']) || null,
-    vat_rate: parseFloat(l?.['AliquotaIVA']) || null,
+    unit_price: num(l?.['PrezzoUnitario']),
+    total_price: num(l?.['PrezzoTotale']),
+    vat_rate: num(l?.['AliquotaIVA']),
     vat_nature: l?.['Natura'] || null,
   }));
 
@@ -141,6 +169,7 @@ function parseFatturaPA(xmlString) {
       supplier_vat: supplierVat || null,
       supplier_fiscal_code: supplierFiscalCode,
       supplier_name: supplierName,
+      supplier_key: supplierKey(supplierVat, supplierFiscalCode, supplierName),
       buyer_vat: buyerVat || null,
       buyer_fiscal_code: buyerFiscalCode,
       buyer_name: buyerName,
