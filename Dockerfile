@@ -1,5 +1,5 @@
 # ── Stage 1: build Vue frontend ───────────────────────────────────────────────
-FROM node:22-alpine AS frontend-builder
+FROM node:26-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
@@ -8,7 +8,7 @@ COPY frontend/ .
 RUN npm run build
 
 # ── Stage 2: Node.js backend + static frontend ────────────────────────────────
-FROM node:22-alpine
+FROM node:26-alpine
 
 # OpenSSL needed for .p7m extraction
 RUN apk add --no-cache openssl

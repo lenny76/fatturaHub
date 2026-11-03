@@ -30,7 +30,7 @@ Importa l'intero archivio di fatture passive (XML e XML.p7m) ricevute via SDI: v
 
 | Layer | Tecnologia |
 |-------|------------|
-| Backend | Node.js 22 + Express 4 |
+| Backend | Node.js 26 + Express 4 |
 | Database | SQLite (better-sqlite3, sincrono) con indice full-text FTS5 |
 | Frontend | Vue 3 + Vite + Tailwind CSS + Pinia |
 | Container | Docker + Docker Compose |
