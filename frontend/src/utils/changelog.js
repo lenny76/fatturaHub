@@ -1,5 +1,17 @@
 export const CHANGELOG = [
   {
+    version: '1.7.1',
+    date: '2026-11-03',
+    entries: [
+      {
+        type: 'fix',
+        items: [
+          'Importate correttamente le fatture .p7m in formato base64 (ricarica le cartelle per recuperare quelle mancanti)',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.7.0',
     date: '2026-10-08',
     entries: [

@@ -5,6 +5,13 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.7.1] - 2026-11-03
+
+### Fix
+- **Fatture firmate (.p7m) in formato base64 non importate**: alcuni fornitori inviano il file `.p7m` codificato in base64 invece che in formato binario (lo SDI accetta entrambi). L'import le scartava con l'errore "Contenuto XML non trovato nel file .p7m", per cui tutte le fatture di quei fornitori mancavano dall'archivio. Ora vengono importate correttamente: per recuperare quelle mancanti basta ricaricare le cartelle già importate, i duplicati vengono saltati automaticamente.
+
+---
+
 ## [1.7.0] - 2026-10-08
 
 ### Aggiunto
