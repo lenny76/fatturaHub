@@ -139,6 +139,23 @@ function findXmlEnd(buf, startOffset) {
 }
 
 /**
+ * Some suppliers send the .p7m base64-encoded (optionally PEM-wrapped with
+ * -----BEGIN PKCS7----- headers) instead of binary DER: SDI accepts both.
+ * If the whole buffer is base64 text, return the decoded DER; otherwise the
+ * buffer is returned unchanged. Binary DER always contains non-base64 bytes.
+ *
+ * @param {Buffer} buffer
+ * @returns {Buffer}
+ */
+function decodeBase64Envelope(buffer) {
+  const text = buffer.toString('latin1')
+    .replace(/-----(BEGIN|END)[^-]*-----/g, '')
+    .replace(/\s+/g, '');
+  if (text.length < 64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(text)) return buffer;
+  return Buffer.from(text, 'base64');
+}
+
+/**
  * Extract XML from a CAdES-BES p7m buffer by searching for the XML content
  * directly in the DER binary. Works without OpenSSL.
  *
@@ -154,6 +171,8 @@ function findXmlEnd(buf, startOffset) {
  * @returns {string} XML string
  */
 function extractXmlFromBuffer(buffer) {
+  buffer = decodeBase64Envelope(buffer);
+
   // Find the earliest XML start marker (any namespace prefix)
   const startMarkers = [
     Buffer.from('<?xml'),
