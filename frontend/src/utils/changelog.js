@@ -1,5 +1,32 @@
 export const CHANGELOG = [
   {
+    version: '1.8.0',
+    date: '2026-11-03',
+    entries: [
+      {
+        type: 'new',
+        items: [
+          'Lotti di fatture: ogni fattura contenuta nello stesso file viene importata separatamente',
+        ],
+      },
+      {
+        type: 'improved',
+        items: [
+          'Riepilogo importazione: notifiche SDI contate a parte, file non importati evidenziati in rosso',
+          'Immagine Docker aggiornata a Node.js 26',
+        ],
+      },
+      {
+        type: 'fix',
+        items: [
+          'Fatture senza importo totale ora conteggiate come imponibile + IVA (ricalcolo automatico al primo avvio)',
+          'Trascinando più file nella finestra Carica vengono aggiunti tutti, non solo il primo',
+          'Nessun file orfano sul disco se l\'importazione di una fattura fallisce',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.7.1',
     date: '2026-11-03',
     entries: [

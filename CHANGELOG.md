@@ -5,6 +5,22 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.8.0] - 2026-11-03
+
+### Aggiunto
+- **Lotti di fatture**: un file può contenere più fatture dello stesso fornitore (un'intestazione e più corpi). Prima veniva archiviata solo la prima e le altre andavano perse; ora ogni fattura del lotto è importata come fattura a sé, consultabile in tutte le viste. Il file originale resta condiviso e viene eliminato solo quando si cancella l'ultima fattura del lotto. I lotti eventualmente già importati vengono divisi automaticamente all'aggiornamento.
+
+### Migliorato
+- **Riepilogo dell'importazione più chiaro**: le ricevute e notifiche SDI (RC, NS, MT…) sono contate a parte come "notifiche SDI ignorate". I file che non è stato possibile importare compaiono in rosso con il motivo, invece di confondersi con le notifiche: è così che le fatture `.p7m` in base64 erano rimaste nascoste.
+- **Node.js 26**: l'immagine Docker passa da Node 22 a Node 26.
+
+### Fix
+- **Fatture senza totale**: l'importo totale del documento è facoltativo nel tracciato e alcune fatture (soprattutto le autofatture TD27) non lo riportano. Venivano contate come zero nella barra dei totali e nella dashboard; ora il totale è calcolato come imponibile + IVA. Al primo avvio dopo l'aggiornamento tutte le fatture vengono ri-elaborate automaticamente (circa 2 minuti ogni 9.000 fatture; durante l'operazione l'app non risponde).
+- **Trascinamento di più file**: trascinando più file insieme nella finestra "Carica" veniva aggiunto solo il primo. Ora vengono aggiunti tutti, anche mescolando file e cartelle.
+- **File orfani**: se l'importazione di una fattura falliva dopo il salvataggio, il file restava sul disco senza comparire nell'archivio.
+
+---
+
 ## [1.7.1] - 2026-11-03
 
 ### Fix
