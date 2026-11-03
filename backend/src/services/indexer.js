@@ -1,5 +1,14 @@
 const { getDb } = require('../db/schema');
-const { parseFatturaPA } = require('./xmlParser');
+const { parseFatturaPA, splitFatturaLotto } = require('./xmlParser');
+
+/**
+ * file_hash della i-esima fattura (base 0) di un file: la prima usa l'hash del file,
+ * così il controllo duplicati all'upload resta un'unica query; le altre di un lotto
+ * usano "<hash>-2", "<hash>-3", ... (file_hash è UNIQUE).
+ */
+function lotHash(fileHash, i) {
+  return i === 0 ? fileHash : `${fileHash}-${i + 1}`;
+}
 
 // Prepared statements cached per DB instance to avoid re-compiling on every file
 let _cachedDb = null;
@@ -158,6 +167,54 @@ function reindexAllInvoices(logPrefix = '[reindex]') {
 }
 
 /**
+ * Divide i lotti importati prima del supporto ai lotti: fino alla v1.7.1 di un file
+ * con più FatturaElettronicaBody veniva salvata solo la prima fattura (con l'XML
+ * dell'intero lotto). Il record esistente tiene il primo body, gli altri diventano
+ * nuovi record che puntano allo stesso file originale.
+ * @returns {{ lots: number, added: number }}
+ */
+function splitStoredLots(logPrefix = '[lotti]') {
+  const db = getDb();
+  const stmts = ensureStmts();
+  // Un body ha tag di apertura + chiusura: 3+ occorrenze = più body
+  const rows = db.prepare(`
+    SELECT id, filename, file_path, file_type, direction, file_hash FROM invoices
+    WHERE xml_content LIKE '%FatturaElettronicaBody%FatturaElettronicaBody%FatturaElettronicaBody%'
+  `).all();
+  const getXml = db.prepare('SELECT xml_content FROM invoices WHERE id = ?').pluck();
+  const setXml = db.prepare('UPDATE invoices SET xml_content = ? WHERE id = ?');
+  const hashExists = db.prepare('SELECT 1 FROM invoices WHERE file_hash = ?').pluck();
+  let lots = 0;
+  let added = 0;
+
+  for (const row of rows) {
+    const parts = splitFatturaLotto(getXml.get(row.id));
+    if (parts.length <= 1) continue;
+    try {
+      db.transaction(() => {
+        setXml.run(parts[0], row.id);
+        reindexInvoice(row.id, parts[0]);
+        parts.slice(1).forEach((xml, j) => {
+          const fileHash = lotHash(row.file_hash, j + 1);
+          if (hashExists.get(fileHash)) return;
+          const { invoice, lines } = parseFatturaPA(xml);
+          indexInvoice({
+            filename: row.filename, filePath: row.file_path, fileType: row.file_type,
+            direction: row.direction, fileHash, xmlContent: xml, invoice, lines,
+          });
+          added++;
+        });
+      })();
+      lots++;
+    } catch (err) {
+      console.error(`${logPrefix} fattura id=${row.id}: ${err.message}`);
+    }
+  }
+  console.log(`${logPrefix} ${lots} lotti divisi, ${added} fatture aggiunte`);
+  return { lots, added };
+}
+
+/**
  * Remove an invoice and its FTS entry (lines are removed by ON DELETE CASCADE).
  * @param {number} id
  */
@@ -169,4 +226,6 @@ function deleteInvoice(id) {
   })();
 }
 
-module.exports = { indexInvoice, reindexInvoice, reindexAllInvoices, deleteInvoice };
+module.exports = {
+  lotHash, indexInvoice, reindexInvoice, reindexAllInvoices, splitStoredLots, deleteInvoice,
+};

@@ -192,6 +192,16 @@ function initDb() {
     db.pragma('user_version = 1');
   }
 
+  // Data migration v2: divide i lotti (più fatture nello stesso file, prima ne veniva
+  // archiviata solo la prima) e ricalcola il totale delle fatture senza
+  // ImportoTotaleDocumento (ora imponibile + IVA del riepilogo).
+  if (db.pragma('user_version', { simple: true }) < 2) {
+    const { splitStoredLots, reindexAllInvoices } = require('../services/indexer');
+    splitStoredLots('[migrazione v2]');
+    reindexAllInvoices('[migrazione v2]');
+    db.pragma('user_version = 2');
+  }
+
   // Riporta il file -wal a dimensione zero (vedi journal_size_limit in getDb)
   db.pragma('wal_checkpoint(TRUNCATE)');
 

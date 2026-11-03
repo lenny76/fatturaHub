@@ -2,10 +2,10 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const iconv = require('iconv-lite');
-const { parseFatturaPA } = require('../services/xmlParser');
+const { parseFatturaPA, splitFatturaLotto, isSdiNotification } = require('../services/xmlParser');
 const { extractXmlFromP7mBuffer, detectEncoding } = require('../services/p7mExtractor');
-const { indexInvoice } = require('../services/indexer');
-const { hashBuffer, saveInvoiceFile } = require('../utils/fileStore');
+const { indexInvoice, lotHash } = require('../services/indexer');
+const { hashBuffer, saveInvoiceFile, deleteInvoiceFile } = require('../utils/fileStore');
 const { getDb } = require('../db/schema');
 
 const router = express.Router();
@@ -47,6 +47,13 @@ router.post('/', (req, res, next) => {
       const buffer = file.buffer;
 
       try {
+        // Notifiche SDI (_RC_, _NS_, _MT_, ...) riconoscibili dal nome: non sono fatture
+        if (isSdiNotification(originalName)) {
+          results.push({ filename: originalName, status: 'skipped' });
+          file.buffer = null;
+          continue;
+        }
+
         const fileHash = hashBuffer(buffer);
         const isP7m = originalName.toLowerCase().endsWith('.p7m');
         const fileType = isP7m ? 'p7m' : 'xml';
@@ -89,10 +96,19 @@ router.post('/', (req, res, next) => {
           continue;
         }
 
-        // Stage 2: parse FatturaPA — errors here mean the file is not a valid FatturaPA
-        let invoice, lines;
+        // Notifiche SDI con nome file non standard: riconosciute dall'elemento radice
+        if (isSdiNotification(originalName, xmlContent)) {
+          results.push({ filename: originalName, status: 'skipped' });
+          file.buffer = null;
+          continue;
+        }
+
+        // Stage 2: parse FatturaPA — errors here mean the file is not a valid FatturaPA.
+        // Un lotto (più FatturaElettronicaBody) diventa una fattura per body; se un body
+        // non è leggibile non si importa nulla del file.
+        let parsed;
         try {
-          ({ invoice, lines } = parseFatturaPA(xmlContent));
+          parsed = splitFatturaLotto(xmlContent).map((xml) => ({ xml, ...parseFatturaPA(xml) }));
         } catch (err) {
           console.error(`[upload] XML parse error in "${originalName}":`, err.message);
           results.push({ filename: originalName, status: 'error', errorType: 'invalid', error: err.message });
@@ -101,22 +117,28 @@ router.post('/', (req, res, next) => {
         }
 
         // Stage 3: save + index — errors here are unexpected import failures
-        const year = invoice.year || new Date().getFullYear();
+        const year = parsed[0].invoice.year || new Date().getFullYear();
         const { relativePath } = saveInvoiceFile(buffer, originalName, direction, year);
         file.buffer = null; // buffer written to disk — release from memory
 
-        const invoiceId = indexInvoice({
-          filename: originalName,
-          filePath: relativePath,
-          fileType,
-          direction,
-          fileHash,
-          xmlContent,
-          invoice,
-          lines,
-        });
+        let ids;
+        try {
+          ids = getDb().transaction(() => parsed.map(({ xml, invoice, lines }, i) => indexInvoice({
+            filename: originalName,
+            filePath: relativePath,
+            fileType,
+            direction,
+            fileHash: lotHash(fileHash, i),
+            xmlContent: xml,
+            invoice,
+            lines,
+          })))();
+        } catch (err) {
+          deleteInvoiceFile(relativePath); // niente file orfani se l'indicizzazione fallisce
+          throw err;
+        }
 
-        results.push({ filename: originalName, status: 'ok', id: invoiceId });
+        results.push({ filename: originalName, status: 'ok', id: ids[0], count: ids.length });
       } catch (err) {
         file.buffer = null;
         console.error(`[upload] Error processing ${originalName}:`, err.message);

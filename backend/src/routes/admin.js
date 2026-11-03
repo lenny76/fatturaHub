@@ -3,7 +3,7 @@ const fs = require('fs');
 const { getDb } = require('../db/schema');
 const { FILES_PATH } = require('../utils/fileStore');
 const { parseFatturaPA } = require('../services/xmlParser');
-const { reindexAllInvoices } = require('../services/indexer');
+const { reindexAllInvoices, splitStoredLots } = require('../services/indexer');
 
 const router = express.Router();
 
@@ -96,6 +96,7 @@ router.post('/rebuild-fts', (req, res) => {
  */
 router.post('/recalculate-amounts', (req, res) => {
   try {
+    splitStoredLots('[recalculate-amounts]');
     const { updated, errors } = reindexAllInvoices('[recalculate-amounts]');
     getDb().pragma('wal_checkpoint(TRUNCATE)');
     res.json({ ok: true, updated, errors });

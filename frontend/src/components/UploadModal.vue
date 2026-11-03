@@ -67,32 +67,18 @@
         <div v-if="summary.total" class="mt-4 space-y-2">
           <!-- Counts row -->
           <div class="flex flex-wrap gap-3 text-xs px-2 py-2 rounded bg-gray-50 dark:bg-gray-700">
-            <span v-if="summary.ok" class="text-green-600 font-medium">✓ {{ summary.ok }} importate</span>
+            <span v-if="summary.ok" class="text-green-600 font-medium">✓ {{ summary.ok }} {{ summary.ok === 1 ? 'fattura importata' : 'fatture importate' }}</span>
             <span v-if="summary.duplicate" class="text-yellow-600 font-medium">⚠ {{ summary.duplicate }} già presenti</span>
-            <span v-if="summary.invalid" class="text-gray-500 font-medium">⊘ {{ summary.invalid }} non valide</span>
-            <span v-if="summary.importError" class="text-red-500 font-medium">✗ {{ summary.importError }} errori</span>
+            <span v-if="summary.failed" class="text-red-500 font-medium">✗ {{ summary.failed }} non importate</span>
+            <span v-if="summary.skipped" class="text-gray-500 font-medium" title="Ricevute e notifiche SDI (RC, NS, MT…): non sono fatture">⊘ {{ summary.skipped }} notifiche SDI ignorate</span>
           </div>
 
-          <!-- Invalid files list -->
-          <div v-if="invalidErrors.length" class="max-h-48 overflow-y-auto space-y-1">
-            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 px-2">File non validi (ignorati):</div>
-            <div v-for="r in invalidErrors.slice(0, 30)" :key="r.filename" class="flex items-start gap-2 text-xs px-2 py-1 rounded bg-gray-50 dark:bg-gray-700">
-              <span class="text-gray-400 flex-none">⊘</span>
-              <span class="truncate max-w-[240px] flex-none text-gray-600 dark:text-gray-300">{{ r.filename }}</span>
-              <span class="text-gray-500 dark:text-gray-400 break-all">{{ r.error }}</span>
-            </div>
-            <div v-if="invalidErrors.length > 30" class="text-xs text-gray-400 dark:text-gray-500 px-2">...e altri {{ invalidErrors.length - 30 }}</div>
-          </div>
-          <div v-else-if="summary.invalid" class="text-xs text-gray-400 dark:text-gray-500 px-2">
-            I file non validi sono notifiche SDI (RC, NS, MT…) o XML non FatturaPA — vengono ignorati.
-          </div>
-
-          <!-- Import errors list -->
-          <div v-if="importErrors.length" class="max-h-48 overflow-y-auto space-y-1">
-            <div class="text-xs font-medium text-red-600 px-2">Errori di importazione:</div>
-            <div v-for="r in importErrors" :key="r.filename" class="flex items-start gap-2 text-xs px-2 py-1 rounded bg-red-50 dark:bg-red-900/20">
+          <!-- Files not imported: unreadable invoices and import errors -->
+          <div v-if="failedFiles.length" class="max-h-48 overflow-y-auto space-y-1">
+            <div class="text-xs font-medium text-red-600 px-2">File non importati — verifica che non siano fatture mancanti:</div>
+            <div v-for="r in failedFiles" :key="r.filename" class="flex items-start gap-2 text-xs px-2 py-1 rounded bg-red-50 dark:bg-red-900/20">
               <span class="text-red-500 flex-none">✗</span>
-              <span class="truncate max-w-[280px] flex-none">{{ r.filename }}</span>
+              <span class="truncate max-w-[280px] flex-none dark:text-gray-200">{{ r.filename }}</span>
               <span class="text-red-500 break-all">{{ r.error }}</span>
             </div>
           </div>
@@ -118,9 +104,9 @@ const CHUNK_SIZE = 50;
 const isDragging = ref(false);
 const pendingFiles = ref([]);
 const uploading = ref(false);
-const summary = ref({ total: 0, ok: 0, duplicate: 0, invalid: 0, importError: 0 });
-const importErrors = ref([]);
-const invalidErrors = ref([]);
+const emptySummary = () => ({ total: 0, ok: 0, duplicate: 0, skipped: 0, failed: 0 });
+const summary = ref(emptySummary());
+const failedFiles = ref([]);
 const fileInput = ref(null);
 const folderInput = ref(null);
 const progress = ref(0);
@@ -129,25 +115,26 @@ const progressTotal = ref(0);
 
 async function onDrop(e) {
   isDragging.value = false;
-  const items = [...e.dataTransfer.items];
+  // DataTransfer items are only readable synchronously inside the drop event:
+  // after the first await they are emptied, so grab every entry up front.
+  const entries = [...e.dataTransfer.items]
+    .map(item => item.webkitGetAsEntry?.())
+    .filter(Boolean);
   const files = [];
-  for (const item of items) {
-    const entry = item.webkitGetAsEntry?.();
-    if (entry) await collectEntries(entry, files);
-  }
+  for (const entry of entries) await collectEntries(entry, files);
   addFiles(files);
 }
 
 async function collectEntries(entry, files) {
   if (entry.isFile) {
-    const file = await new Promise(resolve => entry.file(resolve));
-    files.push(file);
+    const file = await new Promise(resolve => entry.file(resolve, () => resolve(null)));
+    if (file) files.push(file);
   } else if (entry.isDirectory) {
     const reader = entry.createReader();
     // readEntries may return at most 100 items per call — loop until empty
     let batch;
     do {
-      batch = await new Promise(resolve => reader.readEntries(resolve));
+      batch = await new Promise(resolve => reader.readEntries(resolve, () => resolve([])));
       for (const child of batch) await collectEntries(child, files);
     } while (batch.length > 0);
   }
@@ -169,11 +156,19 @@ function addFiles(files) {
   }
 }
 
+// Un file può contenere un lotto di più fatture (r.count)
+function tally(r) {
+  summary.value.total++;
+  if (r.status === 'ok') summary.value.ok += r.count || 1;
+  else if (r.status === 'duplicate') summary.value.duplicate++;
+  else if (r.status === 'skipped') summary.value.skipped++;
+  else { summary.value.failed++; failedFiles.value.push(r); }
+}
+
 async function uploadFiles() {
   uploading.value = true;
-  summary.value = { total: 0, ok: 0, duplicate: 0, invalid: 0, importError: 0 };
-  importErrors.value = [];
-  invalidErrors.value = [];
+  summary.value = emptySummary();
+  failedFiles.value = [];
   progress.value = 0;
 
   const files = pendingFiles.value;
@@ -189,13 +184,7 @@ async function uploadFiles() {
       formData.append('direction', 'passiva');
       for (const f of chunk) formData.append('files', f);
       const { data } = await api.post('/upload', formData, { timeout: 0 });
-      for (const r of data.results) {
-        summary.value.total++;
-        if (r.status === 'ok') summary.value.ok++;
-        else if (r.status === 'duplicate') summary.value.duplicate++;
-        else if (r.errorType === 'invalid') { summary.value.invalid++; invalidErrors.value.push(r); }
-        else { summary.value.importError++; importErrors.value.push(r); }
-      }
+      data.results.forEach(tally);
     } catch (e) {
       // Chunk failed (likely backend crash) — retry file-by-file to isolate the problem
       for (const f of chunk) {
@@ -204,20 +193,9 @@ async function uploadFiles() {
           single.append('direction', 'passiva');
           single.append('files', f);
           const { data } = await api.post('/upload', single, { timeout: 0 });
-          const r = data.results[0];
-          summary.value.total++;
-          if (r.status === 'ok') summary.value.ok++;
-          else if (r.status === 'duplicate') summary.value.duplicate++;
-          else if (r.errorType === 'invalid') { summary.value.invalid++; invalidErrors.value.push(r); }
-          else { summary.value.importError++; importErrors.value.push(r); }
+          data.results.forEach(tally);
         } catch (e2) {
-          summary.value.total++;
-          summary.value.importError++;
-          importErrors.value.push({
-            filename: f.name,
-            status: 'error',
-            error: e2.response?.data?.error || e2.message,
-          });
+          tally({ filename: f.name, status: 'error', error: e2.response?.data?.error || e2.message });
         }
       }
     }

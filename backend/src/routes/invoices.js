@@ -223,7 +223,9 @@ router.delete('/:id', (req, res) => {
   if (!row) return res.status(404).json({ error: 'Fattura non trovata' });
 
   deleteInvoice(parseInt(req.params.id));
-  deleteInvoiceFile(row.file_path);
+  // Le fatture di un lotto condividono il file originale: si elimina con l'ultima
+  const stillUsed = db.prepare('SELECT 1 FROM invoices WHERE file_path = ? LIMIT 1').get(row.file_path);
+  if (!stillUsed) deleteInvoiceFile(row.file_path);
 
   res.json({ ok: true });
 });

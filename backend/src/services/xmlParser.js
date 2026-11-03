@@ -103,7 +103,6 @@ function parseFatturaPA(xmlString) {
   const invoiceNumber = String(datiGeneraliDoc?.['Numero'] || '');
   const invoiceDate = String(datiGeneraliDoc?.['Data'] || '');
   const documentType = String(datiGeneraliDoc?.['TipoDocumento'] || '');
-  const totalAmount = num(datiGeneraliDoc?.['ImportoTotaleDocumento']);
   const year = invoiceDate ? parseInt(invoiceDate.split('-')[0]) : null;
   const month = invoiceDate ? parseInt(invoiceDate.split('-')[1]) : null;
 
@@ -163,6 +162,13 @@ function parseFatturaPA(xmlString) {
     ? null
     : riepilogo.reduce((s, r) => s + (parseFloat(r?.['Imposta']) || 0), 0);
 
+  // ImportoTotaleDocumento è facoltativo nel tracciato (spesso assente nelle
+  // autofatture TD27): in quel caso il totale è imponibile + IVA del riepilogo.
+  let totalAmount = num(datiGeneraliDoc?.['ImportoTotaleDocumento']);
+  if (totalAmount === null && taxableAmount !== null) {
+    totalAmount = Math.round((taxableAmount + taxAmount) * 100) / 100;
+  }
+
   return {
     invoice: {
       transmission_format: transmissionFormat,
@@ -187,4 +193,51 @@ function parseFatturaPA(xmlString) {
   };
 }
 
-module.exports = { parseFatturaPA };
+const BODY_OPEN = /<(?:[\w.-]+:)?FatturaElettronicaBody[\s>]/g;
+const BODY_CLOSE = /<\/(?:[\w.-]+:)?FatturaElettronicaBody\s*>/g;
+
+/**
+ * Un file FatturaPA può contenere un lotto di fatture: un header e più
+ * FatturaElettronicaBody. Restituisce un XML per ogni fattura (header + un solo
+ * body), così ogni fattura del lotto si archivia e si visualizza come le altre.
+ * Con un solo body restituisce [xmlString] invariato.
+ * @param {string} xmlString
+ * @returns {string[]}
+ */
+function splitFatturaLotto(xmlString) {
+  const opens = [...xmlString.matchAll(BODY_OPEN)].map((m) => m.index);
+  const closes = [...xmlString.matchAll(BODY_CLOSE)].map((m) => m.index + m[0].length);
+  if (opens.length <= 1 || opens.length !== closes.length) return [xmlString];
+
+  const head = xmlString.slice(0, opens[0]);
+  const tail = xmlString.slice(closes[closes.length - 1]);
+  return opens.map((start, i) => head + xmlString.slice(start, closes[i]) + tail);
+}
+
+// Elementi radice dei file di notifica/metadati SDI (_RC_, _NS_, _MT_, ...):
+// non sono fatture e vanno ignorati all'import.
+const SDI_NOTIFICATION_ROOTS = new Set([
+  'RicevutaConsegna', 'NotificaScarto', 'NotificaMancataConsegna', 'NotificaEsito',
+  'NotificaEsitoCommittente', 'ScartoEsitoCommittente', 'NotificaDecorrenzaTermini',
+  'AttestazioneTrasmissioneFattura', 'MetadatiInvioFile', 'RicevutaImpossibilitaRecapito',
+  'FileMetadati',
+]);
+// Nome file SDI delle notifiche: IT01234567890_abcde_MT_001.xml
+const SDI_NOTIFICATION_FILENAME = /_(RC|NS|MC|NE|MT|EC|SE|DT|AT)_\d{3}\.xml(\.p7m)?$/i;
+
+/**
+ * true se il file è una notifica SDI (dal nome file o dall'elemento radice dell'XML).
+ * @param {string} filename
+ * @param {string} [xmlString]
+ */
+function isSdiNotification(filename, xmlString) {
+  if (SDI_NOTIFICATION_FILENAME.test(filename)) return true;
+  if (!xmlString) return false;
+  const root = xmlString
+    .replace(/<\?[\s\S]*?\?>/g, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .match(/<(?:[\w.-]+:)?([\w.-]+)[\s>/]/);
+  return !!root && SDI_NOTIFICATION_ROOTS.has(root[1]);
+}
+
+module.exports = { parseFatturaPA, splitFatturaLotto, isSdiNotification };
