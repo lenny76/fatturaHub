@@ -1,5 +1,17 @@
 export const CHANGELOG = [
   {
+    version: '1.9.1',
+    date: '2026-11-09',
+    entries: [
+      {
+        type: 'fix',
+        items: [
+          'Dietro un reverse proxy viene riconosciuto l\'indirizzo reale del client (niente più avviso nei log)',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.9.0',
     date: '2026-11-09',
     entries: [

@@ -5,6 +5,13 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.9.1] - 2026-11-09
+
+### Fix
+- **Avviso "ERR_ERL_UNEXPECTED_X_FORWARDED_FOR" nei log dietro reverse proxy**: con FatturaHub dietro un reverse proxy (Nginx Proxy Manager, Traefik, …) tutte le richieste risultavano provenire dal proxy, quindi il limite di richieste era condiviso da tutti i client e nei log compariva l'avviso. Ora viene riconosciuto l'indirizzo reale del client quando la richiesta arriva da un proxy in rete locale o Docker. Per configurazioni particolari c'è la nuova variabile `TRUST_PROXY` (vedi README).
+
+---
+
 ## [1.9.0] - 2026-11-09
 
 ### Aggiunto
