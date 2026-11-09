@@ -1,5 +1,32 @@
 export const CHANGELOG = [
   {
+    version: '1.9.0',
+    date: '2026-11-09',
+    entries: [
+      {
+        type: 'new',
+        items: [
+          'Filtro per modalità di pagamento (bonifico, RIBA, contanti, …) nella barra in alto',
+          'Sezione Pagamento anche nella visualizzazione semplificata',
+        ],
+      },
+      {
+        type: 'improved',
+        items: [
+          'Mesi del filtro a tre lettere e tendina del tipo documento più stretta',
+          'Importazioni di migliaia di fatture: pausa e ripresa automatica invece di errori',
+        ],
+      },
+      {
+        type: 'fix',
+        items: [
+          'Importati correttamente i .p7m che davano "XML non valido: Start tag expected"',
+          'Corretti i dati di fatture .p7m già importate con caratteri estranei (es. "ZMP05")',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.8.0',
     date: '2026-11-03',
     entries: [

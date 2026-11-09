@@ -5,6 +5,22 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.9.0] - 2026-11-09
+
+### Aggiunto
+- **Filtro per modalità di pagamento**: nella barra in alto, accanto al tipo documento, si possono filtrare le fatture per modalità di pagamento (MP05 bonifico, MP12 RIBA, MP01 contanti, ecc.) oppure vedere quelle senza dati di pagamento ("Non indicata"). Lista, fornitori e totali seguono il filtro. Le fatture già importate vengono aggiornate automaticamente al primo avvio.
+- **Pagamenti nella visualizzazione semplificata**: la sezione Pagamento (condizioni, modalità, importo, scadenza, beneficiario) ora compare anche nella vista semplificata, non solo in quella completa, e quindi anche in stampa e PDF.
+
+### Migliorato
+- **Filtri più compatti**: i mesi sono indicati a tre lettere (Gen, Feb, …; il nome intero compare passandoci sopra) e la tendina del tipo documento è più stretta, mentre l'elenco che si apre resta largo.
+- **Importazioni molto grandi**: caricando migliaia di fatture (ad esempio 10.000, molte già presenti) si poteva superare il limite di richieste al minuto e tutti i file restanti finivano in errore. Ora l'importazione attende qualche secondo e riprende da sola, mostrando "Limite upload raggiunto, riprendo tra …".
+
+### Fix
+- **File .p7m non importati ("XML non valido: Start tag expected")**: alcuni .p7m, a seconda di come il fornitore suddivide il contenuto firmato, venivano letti come vuoti e scartati. Ora vengono importati correttamente: basta ricaricarli.
+- **Dati errati in fatture .p7m già importate**: le versioni precedenti potevano lasciare caratteri estranei nel contenuto di alcune fatture .p7m (ad esempio "ZMP05" al posto di MP05, o imponibile e IVA non corretti). Al primo avvio tutte le fatture .p7m vengono rilette dai file originali e corrette. Le due operazioni automatiche di questa versione possono richiedere qualche minuto all'avvio: è consigliato un backup dei dati prima dell'aggiornamento.
+
+---
+
 ## [1.8.0] - 2026-11-03
 
 ### Aggiunto
