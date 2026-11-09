@@ -22,11 +22,12 @@ function intList(str, min, max) {
 }
 
 /**
- * @param {object} query - q, amount, years, months, docType, supplierKey
+ * @param {object} query - q, amount, years, months, docType, payMethod, supplierKey
+ *   payMethod: codice MPxx, oppure "none" per le fatture senza modalità di pagamento
  * @returns {{ where: string, params: any[] }}
  */
 function buildInvoiceFilters(query) {
-  const { q, amount, years, months, docType, supplierKey } = query;
+  const { q, amount, years, months, docType, payMethod, supplierKey } = query;
   const conditions = ["direction = 'passiva'"];
   const params = [];
 
@@ -49,6 +50,14 @@ function buildInvoiceFilters(query) {
   }
 
   if (docType) { conditions.push('document_type = ?'); params.push(docType); }
+
+  // payment_methods contiene i codici distinti separati da virgola ("MP05,MP12")
+  if (payMethod === 'none') {
+    conditions.push('payment_methods IS NULL');
+  } else if (payMethod) {
+    conditions.push("(',' || payment_methods || ',') LIKE ?");
+    params.push(`%,${String(payMethod).replace(/[%_,]/g, '')},%`);
+  }
   if (supplierKey) { conditions.push('supplier_key = ?'); params.push(supplierKey); }
 
   // Importo cercato senza segno: trova anche le note di credito salvate con importi negativi

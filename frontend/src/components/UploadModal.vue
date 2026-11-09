@@ -52,7 +52,8 @@
         <!-- Progress bar -->
         <div v-if="uploading" class="mt-4">
           <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <span>Importazione in corso...</span>
+            <span v-if="rateLimitWait" class="text-amber-600 dark:text-amber-400">Limite upload raggiunto, riprendo tra {{ rateLimitWait }}s...</span>
+            <span v-else>Importazione in corso...</span>
             <span>{{ progressDone }} / {{ progressTotal }}</span>
           </div>
           <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 overflow-hidden">
@@ -112,6 +113,7 @@ const folderInput = ref(null);
 const progress = ref(0);
 const progressDone = ref(0);
 const progressTotal = ref(0);
+const rateLimitWait = ref(0); // secondi di attesa dopo un 429 sull'upload
 
 async function onDrop(e) {
   isDragging.value = false;
@@ -165,6 +167,30 @@ function tally(r) {
   else { summary.value.failed++; failedFiles.value.push(r); }
 }
 
+const MAX_RATE_LIMIT_RETRIES = 20;
+
+// POST /upload che, se il server risponde 429 (limite upload/minuto superato,
+// es. migliaia di file duplicati elaborati in pochi secondi), attende il tempo
+// indicato da Retry-After e ripete la stessa richiesta invece di fallire.
+async function postUpload(formData) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const { data } = await api.post('/upload', formData, { timeout: 0 });
+      return data;
+    } catch (e) {
+      if (e.response?.status !== 429 || attempt >= MAX_RATE_LIMIT_RETRIES) throw e;
+      const retryAfter = Number(e.response.headers?.['retry-after']);
+      let wait = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.ceil(retryAfter) : 30;
+      while (wait > 0) {
+        rateLimitWait.value = wait;
+        await new Promise(r => setTimeout(r, 1000));
+        wait--;
+      }
+      rateLimitWait.value = 0;
+    }
+  }
+}
+
 async function uploadFiles() {
   uploading.value = true;
   summary.value = emptySummary();
@@ -183,7 +209,7 @@ async function uploadFiles() {
       const formData = new FormData();
       formData.append('direction', 'passiva');
       for (const f of chunk) formData.append('files', f);
-      const { data } = await api.post('/upload', formData, { timeout: 0 });
+      const data = await postUpload(formData);
       data.results.forEach(tally);
     } catch (e) {
       // Chunk failed (likely backend crash) — retry file-by-file to isolate the problem
@@ -192,7 +218,7 @@ async function uploadFiles() {
           const single = new FormData();
           single.append('direction', 'passiva');
           single.append('files', f);
-          const { data } = await api.post('/upload', single, { timeout: 0 });
+          const data = await postUpload(single);
           data.results.forEach(tally);
         } catch (e2) {
           tally({ filename: f.name, status: 'error', error: e2.response?.data?.error || e2.message });

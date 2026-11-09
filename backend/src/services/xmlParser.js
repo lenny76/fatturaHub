@@ -162,6 +162,17 @@ function parseFatturaPA(xmlString) {
     ? null
     : riepilogo.reduce((s, r) => s + (parseFloat(r?.['Imposta']) || 0), 0);
 
+  // --- Modalità di pagamento (MP01 contanti, MP05 bonifico, MP12 RIBA, ...) ---
+  // Codici distinti di tutti i DettaglioPagamento (anche di più blocchi DatiPagamento),
+  // ordinati e separati da virgola (es. "MP05", "MP05,MP12"); null se assenti.
+  const asArray = (v) => (v == null ? [] : Array.isArray(v) ? v : [v]);
+  const paymentMethods = [...new Set(
+    asArray(body?.['DatiPagamento'])
+      .flatMap((p) => asArray(p?.['DettaglioPagamento']))
+      .map((d) => String(d?.['ModalitaPagamento'] || '').trim().toUpperCase())
+      .filter(Boolean),
+  )].sort().join(',') || null;
+
   // ImportoTotaleDocumento è facoltativo nel tracciato (spesso assente nelle
   // autofatture TD27): in quel caso il totale è imponibile + IVA del riepilogo.
   let totalAmount = num(datiGeneraliDoc?.['ImportoTotaleDocumento']);
@@ -188,6 +199,7 @@ function parseFatturaPA(xmlString) {
       taxable_amount: taxableAmount,
       tax_amount: taxAmount,
       ref_documents: refDocuments,
+      payment_methods: paymentMethods,
     },
     lines,
   };

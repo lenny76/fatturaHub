@@ -62,7 +62,17 @@ router.get('/', (req, res) => {
     const years = db.prepare(`SELECT DISTINCT year FROM invoices WHERE year IS NOT NULL ORDER BY year ASC`).all().map(r => r.year);
     const docTypes = db.prepare(`SELECT DISTINCT document_type FROM invoices WHERE document_type IS NOT NULL ORDER BY document_type`).all().map(r => r.document_type);
 
-    res.json({ totals, byYear, topSuppliers, recentImports, years, docTypes });
+    // Modalità di pagamento presenti: codici distinti + "none" se ci sono fatture senza
+    const paymentMethods = new Set();
+    let hasNoPayMethod = false;
+    for (const v of db.prepare(`SELECT DISTINCT payment_methods FROM invoices WHERE direction='passiva'`).pluck().all()) {
+      if (v) v.split(',').forEach((c) => paymentMethods.add(c));
+      else hasNoPayMethod = true;
+    }
+    const payMethods = [...paymentMethods].sort();
+    if (hasNoPayMethod) payMethods.push('none');
+
+    res.json({ totals, byYear, topSuppliers, recentImports, years, docTypes, payMethods });
   } catch (err) {
     console.error('[stats]', err.message);
     res.status(500).json({ error: err.message });

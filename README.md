@@ -13,7 +13,7 @@ Importa l'intero archivio di fatture passive (XML e XML.p7m) ricevute via SDI: v
 - **Fornitori raggruppati per Partita IVA** — nessun doppione quando la ragione sociale cambia tra una fattura e l'altra
 - **Totali sempre coerenti** — imponibile, IVA e totale della selezione corrente, al netto delle note di credito
 - **Tre modalità di visualizzazione**:
-  - *Semplificata* — dati essenziali, righe e riepilogo IVA
+  - *Semplificata* — dati essenziali, righe, riepilogo IVA e pagamenti
   - *Completa* — con quantità, prezzi, sconti, DDT e pagamenti
   - *Ministeriale* — con il foglio di stile ufficiale dell'Agenzia delle Entrate
 - **Stampa ed export PDF** della fattura visualizzata

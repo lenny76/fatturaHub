@@ -103,6 +103,14 @@ function initDb() {
     // Column already exists, ignore
   }
 
+  // Migration: add payment_methods column if it doesn't exist
+  // (modalità di pagamento MP01..MP23, distinte e separate da virgola — filtro toolbar)
+  try {
+    db.exec(`ALTER TABLE invoices ADD COLUMN payment_methods TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
   // Data migration: backfill month (and year) from invoice_date for records imported before the month column existed
   db.exec(`
     UPDATE invoices
@@ -200,6 +208,22 @@ function initDb() {
     splitStoredLots('[migrazione v2]');
     reindexAllInvoices('[migrazione v2]');
     db.pragma('user_version = 2');
+  }
+
+  // Data migration v3: valorizza payment_methods (modalità di pagamento) per le
+  // fatture importate prima del filtro omonimo.
+  if (db.pragma('user_version', { simple: true }) < 3) {
+    const { reindexAllInvoices } = require('../services/indexer');
+    reindexAllInvoices('[migrazione v3]');
+    db.pragma('user_version = 3');
+  }
+
+  // Data migration v4: ri-estrae l'XML dei .p7m dai file originali con l'estrattore
+  // corretto (byte di intestazione DER finiti dentro l'XML, es. "ZMP05" invece di "MP05").
+  if (db.pragma('user_version', { simple: true }) < 4) {
+    const { reextractStoredP7m } = require('../services/indexer');
+    reextractStoredP7m('[migrazione v4]');
+    db.pragma('user_version = 4');
   }
 
   // Riporta il file -wal a dimensione zero (vedi journal_size_limit in getDb)

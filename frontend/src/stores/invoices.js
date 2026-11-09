@@ -7,6 +7,7 @@ const DEFAULT_FILTERS = {
   years: '',
   months: '',
   docType: '',
+  payMethod: '',
   supplierKey: '',
   q: '',
   amount: '',
@@ -27,15 +28,17 @@ export const useInvoicesStore = defineStore('invoices', () => {
 
   const years = computed(() => stats.value?.years || []);
   const docTypes = computed(() => stats.value?.docTypes || []);
+  const payMethods = computed(() => stats.value?.payMethods || []);
 
   // Filtri che definiscono l'insieme di fatture: condivisi da lista, sidebar fornitori
   // e barra totali, così conteggi e importi coincidono sempre
   function filterParams({ withSupplier = true } = {}) {
-    const { years, months, docType, supplierKey, q, amount } = filters.value;
+    const { years, months, docType, payMethod, supplierKey, q, amount } = filters.value;
     const params = {};
     if (years) params.years = years;
     if (months) params.months = months;
     if (docType) params.docType = docType;
+    if (payMethod) params.payMethod = payMethod;
     if (q) params.q = q;
     if (amount) params.amount = amount;
     if (withSupplier && supplierKey) params.supplierKey = supplierKey;
@@ -84,5 +87,5 @@ export const useInvoicesStore = defineStore('invoices', () => {
     filters.value = { ...DEFAULT_FILTERS };
   }
 
-  return { list, total, loading, filters, stats, years, docTypes, fetchList, fetchStats, fetchParties, fetchAnalysis, deleteInvoice, setFilter, resetFilters };
+  return { list, total, loading, filters, stats, years, docTypes, payMethods, fetchList, fetchStats, fetchParties, fetchAnalysis, deleteInvoice, setFilter, resetFilters };
 });

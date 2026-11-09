@@ -1,5 +1,9 @@
+const fs = require('fs');
+const path = require('path');
 const { getDb } = require('../db/schema');
 const { parseFatturaPA, splitFatturaLotto } = require('./xmlParser');
+const { extractXmlFromP7mBuffer } = require('./p7mExtractor');
+const { FILES_PATH } = require('../utils/fileStore');
 
 /**
  * file_hash della i-esima fattura (base 0) di un file: la prima usa l'hash del file,
@@ -28,7 +32,7 @@ function ensureStmts() {
         buyer_vat, buyer_fiscal_code, buyer_name,
         invoice_number, invoice_date, document_type, year, month,
         total_amount, taxable_amount, tax_amount,
-        xml_content, file_hash, has_attachments, ref_documents
+        xml_content, file_hash, has_attachments, ref_documents, payment_methods
       ) VALUES (
         @filename, @filePath, @fileType, @direction,
         @transmission_format,
@@ -36,7 +40,7 @@ function ensureStmts() {
         @buyer_vat, @buyer_fiscal_code, @buyer_name,
         @invoice_number, @invoice_date, @document_type, @year, @month,
         @total_amount, @taxable_amount, @tax_amount,
-        @xmlContent, @fileHash, @hasAttachments, @ref_documents
+        @xmlContent, @fileHash, @hasAttachments, @ref_documents, @payment_methods
       )
     `),
     update: db.prepare(`
@@ -48,7 +52,8 @@ function ensureStmts() {
         invoice_number = @invoice_number, invoice_date = @invoice_date, document_type = @document_type,
         year = @year, month = @month,
         total_amount = @total_amount, taxable_amount = @taxable_amount, tax_amount = @tax_amount,
-        has_attachments = @hasAttachments, ref_documents = @ref_documents
+        has_attachments = @hasAttachments, ref_documents = @ref_documents,
+        payment_methods = @payment_methods
       WHERE id = @id
     `),
     insertLine: db.prepare(`
@@ -167,6 +172,50 @@ function reindexAllInvoices(logPrefix = '[reindex]') {
 }
 
 /**
+ * Ri-estrae l'XML di tutte le fatture .p7m dal file originale e, se diverso da quello
+ * salvato, lo sostituisce e ri-parsa la fattura. Serve dopo un fix dell'estrattore:
+ * fino alla v1.8.0 con blocchi DER da 1024–1279 byte (o lunghezze contenenti 0x04)
+ * un byte dell'intestazione del blocco poteva finire dentro l'XML salvato
+ * (es. <ModalitaPagamento>ZMP05</ModalitaPagamento>). File mancanti o non più
+ * estraibili vengono lasciati come sono.
+ * @returns {{ checked: number, updated: number, errors: number }}
+ */
+function reextractStoredP7m(logPrefix = '[p7m]') {
+  const db = getDb();
+  const rows = db.prepare(`SELECT id, file_path, file_hash FROM invoices WHERE file_type = 'p7m' ORDER BY id`).all();
+  const getXml = db.prepare('SELECT xml_content FROM invoices WHERE id = ?').pluck();
+  const setXml = db.prepare('UPDATE invoices SET xml_content = ? WHERE id = ?');
+  let checked = 0;
+  let updated = 0;
+  let errors = 0;
+
+  console.log(`${logPrefix} avvio: ${rows.length} fatture .p7m da verificare`);
+  for (const row of rows) {
+    const absPath = path.join(FILES_PATH, row.file_path);
+    if (!fs.existsSync(absPath)) continue;
+    checked++;
+    try {
+      const parts = splitFatturaLotto(extractXmlFromP7mBuffer(fs.readFileSync(absPath)));
+      // Fattura i-esima di un lotto: file_hash "<hash>-<i+1>" (vedi lotHash)
+      const suffix = row.file_hash.match(/-(\d+)$/);
+      const xml = parts[suffix ? Number(suffix[1]) - 1 : 0];
+      if (!xml || xml === getXml.get(row.id)) continue;
+      db.transaction(() => {
+        setXml.run(xml, row.id);
+        reindexInvoice(row.id, xml);
+      })();
+      updated++;
+    } catch (err) {
+      errors++;
+      console.error(`${logPrefix} fattura id=${row.id}: ${err.message}`);
+    }
+    if (checked % 1000 === 0) console.log(`${logPrefix} ${checked}/${rows.length}`);
+  }
+  console.log(`${logPrefix} completato: ${checked} verificate, ${updated} corrette, ${errors} errori`);
+  return { checked, updated, errors };
+}
+
+/**
  * Divide i lotti importati prima del supporto ai lotti: fino alla v1.7.1 di un file
  * con più FatturaElettronicaBody veniva salvata solo la prima fattura (con l'XML
  * dell'intero lotto). Il record esistente tiene il primo body, gli altri diventano
@@ -227,5 +276,5 @@ function deleteInvoice(id) {
 }
 
 module.exports = {
-  lotHash, indexInvoice, reindexInvoice, reindexAllInvoices, splitStoredLots, deleteInvoice,
+  lotHash, indexInvoice, reindexInvoice, reindexAllInvoices, splitStoredLots, reextractStoredP7m, deleteInvoice,
 };

@@ -383,12 +383,11 @@ function buildHtml(xmlString, full, forPdf = false) {
     ? `<table class="t">${causaleHtml}${refRows}</table>`
     : '';
 
-  // Payments (completa only)
-  const paymentsHtml = full
-    ? getAllElements(body, 'DettaglioPagamento').map(p => {
-        const beneficiario = getText(p, 'Beneficiario');
-        const codice = getText(p, 'CodicePagamento');
-        return `
+  // Payments (semplificata + completa)
+  const paymentsHtml = getAllElements(body, 'DettaglioPagamento').map(p => {
+    const beneficiario = getText(p, 'Beneficiario');
+    const codice = getText(p, 'CodicePagamento');
+    return `
       <tr>
         <td>${paymentConditionLabel(getText(p.parentNode, 'CondizioniPagamento'))}</td>
         <td>${paymentMethodLabel(getText(p, 'ModalitaPagamento'))}</td>
@@ -397,8 +396,7 @@ function buildHtml(xmlString, full, forPdf = false) {
         <td>${getText(p, 'DataScadenzaPagamento') || '—'}</td>
       </tr>${beneficiario ? `
       <tr><td colspan="5">${beneficiario}</td></tr>` : ''}`;
-      }).join('')
-    : '';
+  }).join('');
 
   return `<style>
     .inv{font-family:Arial,sans-serif;font-size:12px;color:#1a1a1a}
@@ -465,7 +463,7 @@ function buildHtml(xmlString, full, forPdf = false) {
       Totale documento: <strong>${getText(datiDoc, 'ImportoTotaleDocumento')}</strong>
     </div>
 
-    ${full && paymentsHtml ? `<div class="sec" style="margin-top:10px">Pagamento</div>
+    ${paymentsHtml ? `<div class="sec" style="margin-top:10px">Pagamento</div>
     <table class="t">
       <tr><th>Condizioni</th><th>Modalità</th><th>Pagamento</th><th class="r">Importo</th><th>Scadenza</th></tr>
       ${paymentsHtml}

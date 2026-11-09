@@ -177,8 +177,9 @@
           @click="toggleMonth(idx + 1)"
           class="filter-btn"
           :class="selectedMonths.includes(idx + 1) ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600'"
+          :title="m"
         >
-          {{ m }}
+          {{ m.slice(0, 3) }}
         </button>
 
         <template v-if="store.docTypes.length">
@@ -187,13 +188,25 @@
           <select
             v-model="selectedDocType"
             @change="applyDocType"
-            class="toolbar-select"
-            title="Filtra per tipo documento"
+            class="toolbar-select w-36 truncate"
+            :title="selectedDocType ? docTypeLabel(selectedDocType) : 'Filtra per tipo documento'"
           >
             <option value="">Tipo: tutti</option>
             <option v-for="dt in store.docTypes" :key="dt" :value="dt">{{ docTypeLabel(dt) }}</option>
           </select>
         </template>
+
+        <!-- Modalità di pagamento -->
+        <select
+          v-if="store.payMethods.length"
+          v-model="selectedPayMethod"
+          @change="applyPayMethod"
+          class="toolbar-select w-36 truncate ml-2"
+          :title="selectedPayMethod ? payMethodOptionLabel(selectedPayMethod) : 'Filtra per modalità di pagamento'"
+        >
+          <option value="">Pagamento: tutti</option>
+          <option v-for="mp in store.payMethods" :key="mp" :value="mp">{{ payMethodOptionLabel(mp) }}</option>
+        </select>
 
         <!-- Reset filtri -->
         <button
@@ -279,8 +292,9 @@
               </div>
               <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
                 <li>• <strong class="text-gray-700 dark:text-gray-300">Anno</strong>: selezione multipla nella toolbar</li>
-                <li>• <strong class="text-gray-700 dark:text-gray-300">Mese</strong>: selezione multipla (Gennaio–Dicembre)</li>
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Mese</strong>: selezione multipla (Gen–Dic)</li>
                 <li>• <strong class="text-gray-700 dark:text-gray-300">Tipo documento</strong>: TD01, TD04, ecc.</li>
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Pagamento</strong>: modalità di pagamento (MP05 bonifico, MP12 RIBA, ecc.) o "Non indicata"</li>
                 <li>• Pulsante <em>× Reset</em> per azzerare tutti i filtri attivi</li>
                 <li>• Filtri anno e mese persistiti in localStorage</li>
               </ul>
@@ -293,7 +307,7 @@
                 <span class="text-xs font-semibold text-gray-800 dark:text-white">Visualizzazione fatture</span>
               </div>
               <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                <li>• <strong class="text-gray-700 dark:text-gray-300">Semplificata</strong>: campi principali, leggibile</li>
+                <li>• <strong class="text-gray-700 dark:text-gray-300">Semplificata</strong>: campi principali e pagamenti, leggibile</li>
                 <li>• <strong class="text-gray-700 dark:text-gray-300">Completa</strong>: righe, prezzi, IVA e pagamenti</li>
                 <li>• Visualizzatore XML raw con syntax highlighting</li>
               </ul>
@@ -599,7 +613,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useInvoicesStore } from '@/stores/invoices';
 import UploadModal from '@/components/UploadModal.vue';
 import api from '@/api';
-import { docTypeLabel, DOC_TYPES, PAYMENT_METHODS, PAYMENT_CONDITIONS } from '@/utils/docTypes';
+import { docTypeLabel, paymentMethodLabel, DOC_TYPES, PAYMENT_METHODS, PAYMENT_CONDITIONS } from '@/utils/docTypes';
 import { CHANGELOG } from '@/utils/changelog';
 
 const store = useInvoicesStore();
@@ -630,7 +644,11 @@ const hiddenYears = ref([]);
 const selectedYears = ref([]);
 const selectedMonths = ref([]);
 const selectedDocType = ref('');
+const selectedPayMethod = ref('');
 const searchQ = ref('');
+
+// "none" = fatture senza modalità di pagamento (vedi buildInvoiceFilters)
+const payMethodOptionLabel = (code) => (code === 'none' ? 'Non indicata' : paymentMethodLabel(code));
 
 const visibleYears = computed(() => store.years.filter(y => !hiddenYears.value.includes(y)));
 
@@ -643,7 +661,7 @@ const effectiveYears = computed(() => {
 
 const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
-const hasActiveFilters = computed(() => selectedYears.value.length > 0 || selectedMonths.value.length > 0 || !!selectedDocType.value);
+const hasActiveFilters = computed(() => selectedYears.value.length > 0 || selectedMonths.value.length > 0 || !!selectedDocType.value || !!selectedPayMethod.value);
 
 function saveFilters() {
   localStorage.setItem('fh_years', JSON.stringify(selectedYears.value));
@@ -706,12 +724,19 @@ function applyDocType() {
   store.fetchList();
 }
 
+function applyPayMethod() {
+  store.setFilter('payMethod', selectedPayMethod.value);
+  store.fetchList();
+}
+
 function resetFilters() {
   selectedYears.value = [];
   selectedMonths.value = [];
   selectedDocType.value = '';
+  selectedPayMethod.value = '';
   searchQ.value = '';
   store.setFilter('docType', '');
+  store.setFilter('payMethod', '');
   store.setFilter('q', '');
   store.setFilter('amount', '');
   applyFilters(); // usa effectiveYears per rispettare gli anni nascosti
@@ -850,6 +875,7 @@ async function executeDeleteAll() {
     selectedYears.value = [];
     selectedMonths.value = [];
     selectedDocType.value = '';
+    selectedPayMethod.value = '';
     searchQ.value = '';
     saveFilters();
     await Promise.all([store.fetchStats(), store.fetchList()]);

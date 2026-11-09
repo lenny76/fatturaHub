@@ -100,41 +100,20 @@ function reassembleDerOctetChunks(buf, firstChunkOffset) {
  * Returns the offset just past the closing tag, or -1 if not found.
  */
 function findXmlEnd(buf, startOffset) {
-  const closeTagPatterns = [
-    Buffer.from('</FatturaElettronica>'),
-    Buffer.from('</p:FatturaElettronica>'),
-    Buffer.from('</ns3:FatturaElettronica>'),
-  ];
+  // </ [optional prefix:] FatturaElettronica>  — prefix: ns0, p, ns3, a, …
+  const closeName = Buffer.from('FatturaElettronica>');
+  const isPrefixChar = (c) => (c >= 0x30 && c <= 0x39) || (c >= 0x41 && c <= 0x5A) ||
+    (c >= 0x61 && c <= 0x7A) || c === 0x5F /* _ */ || c === 0x2D /* - */ || c === 0x2E /* . */;
 
-  for (const pattern of closeTagPatterns) {
-    for (let i = startOffset; i < buf.length - pattern.length; i++) {
-      let found = true;
-      for (let j = 0; j < pattern.length; j++) {
-        if (buf[i + j] !== pattern[j]) { found = false; break; }
-      }
-      if (found) {
-        console.log('[p7mExtractor] Found close tag at byte offset:', i + pattern.length, 'pattern:', pattern.toString());
-        return i + pattern.length;
-      }
+  for (let i = buf.indexOf('</', startOffset); i !== -1; i = buf.indexOf('</', i + 2)) {
+    let nameStart = i + 2;
+    let p = nameStart;
+    while (p < nameStart + 20 && p < buf.length && isPrefixChar(buf[p])) p++;
+    if (buf[p] === 0x3a /* : */) nameStart = p + 1;
+    if (buf.subarray(nameStart, nameStart + closeName.length).equals(closeName)) {
+      return nameStart + closeName.length;
     }
   }
-
-  // Generic: </ [optional prefix:] FatturaElettronica>
-  const genericClose = Buffer.from('FatturaElettronica>');
-  for (let i = startOffset; i < buf.length - genericClose.length - 3; i++) {
-    if (buf[i] !== 0x3c || buf[i + 1] !== 0x2f) continue;
-    let pos = i + 2;
-    while (pos < i + 22 && (buf[pos] === 0x3a || (buf[pos] >= 0x41 && buf[pos] <= 0x5A) || (buf[pos] >= 0x61 && buf[pos] <= 0x7A) || (buf[pos] >= 0x30 && buf[pos] <= 0x39))) pos++;
-    let match = true;
-    for (let j = 0; j < genericClose.length; j++) {
-      if (buf[pos + j] !== genericClose[j]) { match = false; break; }
-    }
-    if (match) {
-      console.log('[p7mExtractor] Found generic close tag at byte offset:', pos + genericClose.length);
-      return pos + genericClose.length;
-    }
-  }
-
   return -1;
 }
 
@@ -217,6 +196,11 @@ function extractXmlFromBuffer(buffer) {
   // Try to reassemble DER OCTET STRING chunks to avoid chunk-header bytes
   // corrupting the XML. Walk back from xmlStart to find the 04 tag of the
   // first chunk (chunk header ends exactly where XML data starts).
+  //
+  // A 0x04 byte can also appear inside the real header's length field: with
+  // 1024-byte chunks the header is `04 82 04 00`, and `04 00` parses as a valid
+  // zero-length chunk ending right at xmlStart. So a candidate is accepted only
+  // if its reassembled payload actually contains the XML closing tag.
   let workBuffer = null;
   for (let back = 1; back <= 12; back++) {
     const pos = xmlStart - back;
@@ -226,13 +210,12 @@ function extractXmlFromBuffer(buffer) {
     if (!parsed) continue;
     const dataStart = pos + 1 + parsed.headerBytes;
     const offset = xmlStart - dataStart;
-    if (offset >= 0 && offset <= 4) {
-      // This 04 header leads to our XML data start (offset accounts for BOM or whitespace).
-      const reassembled = reassembleDerOctetChunks(buffer, pos);
-      if (reassembled) {
-        workBuffer = reassembled;
-        console.log('[p7mExtractor] Reassembled', reassembled.length, 'bytes from DER OCTET STRING chunks');
-      }
+    // offset accounts for BOM or whitespace; the chunk must contain the XML start
+    if (offset < 0 || offset > 4 || parsed.length <= offset) continue;
+    const reassembled = reassembleDerOctetChunks(buffer, pos);
+    if (reassembled && findXmlEnd(reassembled, 0) !== -1) {
+      workBuffer = reassembled;
+      console.log('[p7mExtractor] Reassembled', reassembled.length, 'bytes from DER OCTET STRING chunks');
       break;
     }
   }
