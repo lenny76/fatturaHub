@@ -24,6 +24,21 @@ const versionRouter = require('./routes/version');
 const app = express();
 const PORT = process.env.PORT || 5173;
 
+// Reverse proxy (Nginx Proxy Manager, Traefik, …): senza 'trust proxy' req.ip è l'IP
+// del proxy, quindi il rate limit metterebbe tutti i client nello stesso contatore
+// (ed express-rate-limit logga ERR_ERL_UNEXPECTED_X_FORWARDED_FOR). Di default ci si
+// fida di X-Forwarded-For solo se la richiesta arriva da un indirizzo locale/privato
+// (il proxy, anche nella rete Docker). TRUST_PROXY: true | false | numero di hop |
+// elenco di IP/subnet separati da virgola.
+function parseTrustProxy(value) {
+  if (value === undefined || value === '') return 'loopback, linklocal, uniquelocal';
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (/^\d+$/.test(value)) return Number(value);
+  return value;
+}
+app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY));
+
 // Rate limiters
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

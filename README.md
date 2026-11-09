@@ -105,6 +105,7 @@ Variabili d'ambiente (opzionali, hanno default funzionanti):
 | `PORT` | `5173` | Porta del server |
 | `DB_PATH` | `data/db/fatturahub.db` | Percorso database SQLite |
 | `FILES_PATH` | `data/files/` | Cartella file originali |
+| `TRUST_PROXY` | `loopback, linklocal, uniquelocal` | Da quali indirizzi accettare `X-Forwarded-For` (reverse proxy). Il default copre un proxy in rete locale o Docker; `false` per ignorarlo, oppure IP/subnet o numero di hop |
 
 Nell'immagine Docker `DB_PATH` e `FILES_PATH` puntano già a `/app/data`.
 
