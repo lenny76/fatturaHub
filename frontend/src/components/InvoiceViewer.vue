@@ -367,7 +367,9 @@ function buildHtml(xmlString, full, forPdf = false) {
     ['DatiRicezione', 'Ricezione'],
     ['DatiFattureCollegate', 'Fattura collegata'],
   ];
-  const refRows = refTypes.flatMap(([tag, label]) =>
+  // Lo stesso documento è spesso ripetuto una volta per ogni riga che lo cita
+  // (cambia solo RiferimentoNumeroLinea, non mostrato): righe identiche → una sola.
+  const refRows = [...new Set(refTypes.flatMap(([tag, label]) =>
     getAllElements(datiGen, tag).map(d => {
       const parts = [
         getText(d, 'IdDocumento') && `n° <strong>${getText(d, 'IdDocumento')}</strong>`,
@@ -377,7 +379,7 @@ function buildHtml(xmlString, full, forPdf = false) {
       ].filter(Boolean).join(' &nbsp; ');
       return parts ? `<tr><td class="lbl" style="width:30%">${label}</td><td>${parts}</td></tr>` : '';
     })
-  ).filter(Boolean).join('');
+  ).filter(Boolean))].join('');
 
   const refHtml = (causaleHtml || refRows)
     ? `<table class="t">${causaleHtml}${refRows}</table>`
