@@ -5,6 +5,13 @@ Tutte le modifiche rilevanti al progetto sono documentate in questo file.
 Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e il progetto adotta il [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.9.2] - 2026-11-16
+
+### Fix
+- **Ordini ripetuti nella fattura**: alcuni fornitori indicano lo stesso ordine d'acquisto una volta per ogni riga della fattura a cui si riferisce, e nelle visualizzazioni semplificata e completa compariva più volte la stessa riga "Ordine n° … del …". Ora ogni ordine (così come contratti, convenzioni, ricezioni e fatture collegate) viene mostrato una sola volta.
+
+---
+
 ## [1.9.1] - 2026-11-09
 
 ### Fix

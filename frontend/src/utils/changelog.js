@@ -1,5 +1,17 @@
 export const CHANGELOG = [
   {
+    version: '1.9.2',
+    date: '2026-11-16',
+    entries: [
+      {
+        type: 'fix',
+        items: [
+          'Gli ordini citati su più righe della fattura compaiono una sola volta',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.9.1',
     date: '2026-11-09',
     entries: [
